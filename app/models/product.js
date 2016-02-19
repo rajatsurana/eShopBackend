@@ -5,18 +5,27 @@ var Schema = mongoose.Schema;
 
 // create a schema
 var productSchema = new Schema({
-	product_id: { type: Number, required: true, unique: true },
 	price: Number,
 	quantity :Number,
 	photoUrl: String,
 	description: String,
 	discount: Number,
-    created_at: Date,
-    updated_at: Date
+    // created_at: Date,
+    // updated_at: Date
 });
 
-var Product = mongoose.model('Product', productSchema);
+userSchema.pre('save', function(next) {
+  // get the current date
+  var currentDate = new Date();
 
+  // change the updated_at field to current date
+  this.updated_at = currentDate;
 
-// make this available to our users in our Node applications
-module.exports = Product;
+  // if created_at doesn't exist, add to that field
+  if (!this.created_at)
+    this.created_at = currentDate;
+
+  next();
+});
+
+module.exports = mongoose.model('Product', productSchema);;
