@@ -46,7 +46,6 @@ router.route('/products')
         });
     })
 router.route('/update_price/:productId')
-
 .get(function(req, res) {
     Product.findOne({ product_id: req.params.productId }, function(err, product) {
         product.price=req.query['new_price'] || 'default';
