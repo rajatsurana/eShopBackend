@@ -45,19 +45,33 @@ router.route('/products')
             res.json({ message: 'product created!', newProduct: product});
         });
     })
-router.route('/update_price/:productId')
-.get(function(req, res) {
-    Product.findOne({ product_id: req.params.productId }, function(err, product) {
-        product.price=req.query['new_price'] || 'default';
-        product.save(function(err) {
-            if (err)
-            res.send(err);
+router.route('/update_price')
+	.post(function(req, res) {
+		Product.findOne({ _id: req.body._id }, function(err, product) {
+			product.price=req.body.price || '0';
+			product.save(function(err) {
+				if (err)
+				res.send(err);
 
-            res.json({ message: 'Product price updated!' });
-        });
+				res.json({ message: 'Product price updated!' });
+			});
 
-    });
-});
+		});
+	});
+router.route('/change_discount')
+	.post(function(req, res) {
+		Product.findOne({ _id: req.body._id }, function(err, product) {
+			product.discount=req.body.discount || '0';
+			product.save(function(err) {
+				if (err)
+				res.send(err);
+
+				res.json({ message: 'Discount value changed!' });
+			});
+
+		});
+	});
+	
 
 app.use('/api', router);
 app.listen(3000);
