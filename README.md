@@ -6,7 +6,7 @@ Backend for CSP301
 
 ## API endpoints
 
-- http://localhost:8080/api/products : to add product - POST ->price ,quantity & description
-- http://localhost:8080/api/products : to list all products - GET
-- http://localhost:8080/api/update_price : to change price of product - POST -> _id & price
-- http://localhost:8080/api/change_discount : to change discount amount - POST -> _id & discount
+- http://localhost:3000/api/products : to add product - POST ->price ,quantity & description
+- http://localhost:3000/api/products : to list all products - GET
+- http://localhost:3000/api/update_price : to change price of product - POST -> _id & price
+- http://localhost:3000/api/change_discount : to change discount amount - POST -> _id & discount
