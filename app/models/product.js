@@ -14,7 +14,7 @@ var productSchema = new Schema({
     // updated_at: Date
 });
 
-userSchema.pre('save', function(next) {
+productSchema.pre('save', function(next) {
   // get the current date
   var currentDate = new Date();
 

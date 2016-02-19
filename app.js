@@ -35,7 +35,7 @@ router.route('/products')
         var product = new Product();
 
             product.price =  req.body.price || '0',
-            product.quantity = req.body.price || '0',
+            product.quantity = req.body.quantity || '0',
             product.description = req.body.description || 'default'
 
         product.save(function(err) {
