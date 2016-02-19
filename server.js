@@ -15,6 +15,11 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 var mongoose   = require('mongoose');
 mongoose.connect('mongodb://localhost/eSubziDatabase3');
+var db = mongoose.connection;
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', function() {
+  // we're connected!
+});
 var port = process.env.PORT || 8080;        // set our port
 // ROUTES FOR OUR API
 // =============================================================================
@@ -39,6 +44,21 @@ router.get('/', function(req, res) {
 					res.send(err);
 
 				res.json(products);
+			});
+		});
+		// http://localhost:8080/api/create_product?productId=2&new_price=350&quantity=12&description=Tamatar
+		router.route('/create_product')
+		.get(function(req, res) {
+			var product = new Product();      // create a new instance of the Bear model
+			product.price = req.query['new_price'] || 'default';  // set the bears name (comes from the request)
+			product.product_id=req.query['productId'] || 'default';
+			product.quantity = req.query['quantity'] || 'default';
+			product.description = req.query['description'] || 'default';
+			product.save(function(err) {
+				if (err)
+					res.send(err);
+
+				res.json({ message: 'product created!' });
 			});
 		});
 	router.route('/create_product/:productId/:new_price/:quantity/:description')
