@@ -37,6 +37,7 @@ router.get('/', function(req, res) {
 });
 
 // more routes for our API will happen here
+//http://localhost:8080/api/list_products
 	router.route('/list_products')
 		.get(function(req, res) {
 			Product.find(function(err, products) {
@@ -61,29 +62,12 @@ router.get('/', function(req, res) {
 				res.json({ message: 'product created!' });
 			});
 		});
-	router.route('/create_product/:productId/:new_price/:quantity/:description')
-		.post(function(req, res) {
-			//console.log(req.body.name);
-			//console.log('post call');
-			var product = new Product();      // create a new instance of the Bear model
-			product.price = req.params.new_price;  // set the bears name (comes from the request)
-			product.product_id=req.params.productId;
-			product.quantity = req.params.quantity;
-			product.description = req.params.description;
-			// save the bear and check for errors
-			product.save(function(err) {
-				if (err)
-					res.send(err);
-
-				res.json({ message: 'product created!' });
-			});
-			
-		});
-		router.route('/update_price/:productId/:new_price')
+		//http://localhost:8080/api/update_price/1?new_price=1509
+		router.route('/update_price/:productId')
 		
-		.put(function(req, res) {
-			Product.find({ product_id: req.params.productId }, function(err, product) {
-				product.price=req.params.new_price;
+		.get(function(req, res) {
+			Product.findOne({ product_id: req.params.productId }, function(err, product) {
+				product.price=req.query['new_price'] || 'default';
 				product.save(function(err) {
 					if (err)
 						res.send(err);
@@ -93,6 +77,7 @@ router.get('/', function(req, res) {
 				
 			});
 		});
+	
 
 // REGISTER OUR ROUTES -------------------------------
 // all of our routes will be prefixed with /api
