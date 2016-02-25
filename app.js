@@ -5,7 +5,8 @@ var morgan     = require('morgan');
 var Product = require('./models/product');
 var mongoose   = require('mongoose');
 var router = express.Router();
-
+var pushiPhone = require('./apns/pushiPhone')
+var async = require('async')
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
@@ -82,12 +83,21 @@ router.route('/change_discount')
             {
                 res.send(err);
             }
+            async.series([
+                async.asyncify(pushiPhone.sendPushes("Discount changed to " + product.discount)),
+                function () {
+                    // data is the result of parsing the text.
+                    // If there was a parsing error, it would have been caught.
+                }
+
+            ]);
+
             res.json({ message: 'Discount value changed!' ,newProduct : product});
+
         });
 
     });
 });
-
 
 app.use('/api', router);
 app.listen(3000);
