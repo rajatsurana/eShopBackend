@@ -6,6 +6,7 @@ var Product = require('./models/product');
 var mongoose   = require('mongoose');
 var router = express.Router();
 var pushiPhone = require('./apns/pushiPhone')
+var pushAndroid = require('./androidPush/androidPNS')
 var async = require('async')
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -88,8 +89,12 @@ router.route('/change_discount')
                 function () {
                     // data is the result of parsing the text.
                     // If there was a parsing error, it would have been caught.
+                },
+				async.asyncify(pushAndroid.sendPushes("Discount changed to " + product.discount)),
+                function () {
+                    // data is the result of parsing the text.
+                    // If there was a parsing error, it would have been caught.
                 }
-
             ]);
 
             res.json({ message: 'Discount value changed!' ,newProduct : product});
