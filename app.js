@@ -36,7 +36,7 @@ router.route('/products')
     product.price =  req.body.price || '0',
     product.quantity = req.body.quantity || '0',
     product.description = req.body.description || 'default'
-
+    product.discount = req.body.discount || '0'
     product.save(function(err) {
         if (err)
         {
