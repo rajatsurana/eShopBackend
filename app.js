@@ -36,7 +36,7 @@ router.route('/products')
 
     product.price =  req.body.price || '0',
     product.quantity = req.body.quantity || '0',
-    product.description = req.body.description || 'default'
+    product.description = req.body.description || 'default',
     product.discount = req.body.discount || '0'
     product.save(function(err) {
         if (err)
@@ -46,6 +46,7 @@ router.route('/products')
         res.json({ message: 'product created!', newProduct: product});
     });
 })
+
 router.route('/update_price')
 .post(function(req, res)
 {
@@ -107,3 +108,4 @@ router.route('/change_discount')
 app.use('/api', router);
 app.listen(3000);
 console.log('Magic happens on port 3000');
+//56d09039e551f6281b399a6d
