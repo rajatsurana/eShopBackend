@@ -14,7 +14,8 @@ app.use(bodyParser.json());
 mongoose.connect('mongodb://localhost/eSubzi');
 
 
-router.get('/', function(req, res) {
+router.get('/', function(req, res)
+{
     res.json({ message: 'hooray! welcome to our api!' });
 });
 
@@ -38,7 +39,8 @@ router.route('/products')
     product.quantity = req.body.quantity || '0',
     product.description = req.body.description || 'default'
     product.discount = req.body.discount || '0'
-    product.save(function(err) {
+    product.save(function(err)
+    {
         if (err)
         {
             res.send(err);
@@ -46,10 +48,10 @@ router.route('/products')
         res.json({ message: 'product created!', newProduct: product});
     });
 })
+
 router.route('/update_price')
 .post(function(req, res)
 {
-
     if (req.body["price"] == 0)
     {
         res.send({message : "price can't be 0"})
@@ -61,7 +63,8 @@ router.route('/update_price')
 
             product.price = req.body.price;
 
-            product.save(function(err) {
+            product.save(function(err)
+            {
                 if (err)
                 {
                     res.send(err);
@@ -73,34 +76,25 @@ router.route('/update_price')
     }
 
 });
+
 router.route('/change_discount')
 .post(function(req, res)
 {
     Product.findOne({ _id: req.body.id }, function(err, product)
     {
         product.discount=req.body.discount || '0';
-        product.save(function(err) {
+        product.save(function(err)
+        {
             if (err)
             {
                 res.send(err);
             }
             async.series([
                 async.asyncify(pushiPhone.sendPushes("Discount changed to " + product.discount)),
-                function () {
-                    // data is the result of parsing the text.
-                    // If there was a parsing error, it would have been caught.
-                },
-				async.asyncify(pushAndroid.sendPushes("Discount changed to " + product.discount)),
-                function () {
-                    // data is the result of parsing the text.
-                    // If there was a parsing error, it would have been caught.
-                }
+				async.asyncify(pushAndroid.sendPushes("Discount changed to " + product.discount))
             ]);
-
             res.json({ message: 'Discount value changed!' ,newProduct : product});
-
         });
-
     });
 });
 
