@@ -8,103 +8,146 @@ var router = express.Router();
 var pushiPhone = require('./apns/pushiPhone')
 var pushAndroid = require('./androidPush/androidPNS')
 var async = require('async')
-var jwt    = require('jsonwebtoken');
+var passport = require('passport')
 var config = require('./models/config');
 var User   = require('./models/user');
+var LocalStrategy   = require('passport-local').Strategy;
+var jwt = require('jsonwebtoken');
+
+var secret = 'superSecret'
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-app.use(morgan('tiny'))
+app.use(morgan('dev'))
+app.use(passport.initialize());
 
 mongoose.connect('mongodb://localhost/eSubzi');
 
 app.set('superSecret', config.secret);
+
+passport.use('local-login',new LocalStrategy(
+    {
+        usernameField : 'email',
+        passwordField : 'password',
+        passReqToCallback : false
+    },
+    function(email, password, done)
+    {
+        User.findOne({ 'email': email }, function(err, user)
+        {
+            if (err) { return done(err); }
+            if (!user)
+            {
+                return done(null, false, { message: 'Incorrect username.' });
+            }
+            if (!user.validPassword(password))
+            {
+                return done(null, false, { message: 'Incorrect password.' });
+            }
+            return done(null, user);
+        });
+    }
+));
+
+passport.use('local-signup',new LocalStrategy(
+    {
+        usernameField : 'email',
+        passwordField : 'password',
+        passReqToCallback : false
+    },
+    function(email,password,done)
+    {
+        User.findOne({'email':email},function(err,user)
+        {
+            if(err)
+            return done(err)
+            if(user)
+            {
+                return done(null, false, { message: 'email already exists'});
+            }
+            else
+            {
+                var newUser = new User()
+                newUser.email = email
+                newUser.password = newUser.generateHash(password)
+
+                newUser.save(function(err)
+                {
+                    if(err)
+                    throw err
+                    return done(null,newUser)
+                })
+            }
+        })
+
+    }
+))
 
 router.get('/', function(req, res)
 {
     res.json({ message: 'hooray! welcome to our api!' });
 });
 
-router.route('/setup')
-.get(function(req, res) {
-    var user = new User({
-        name: 'Rajat Surana',
-        password: 'password',
-        admin: true
-    });
-
-    user.save(function(err) {
-        if (err) throw err;
-        console.log('User saved successfully');
-        res.json({ success: true ,user:user});
-    });
-});
-
-router.get('/users', function(req, res)
+router.post('/login', function(req, res, next)
 {
-    User.find({}, function(err, users) {
-        res.json(users);
-    });
-});
+    passport.authenticate('local-login', function(err, user, info) {
+        if (err) { return next(err) }
+        if (!user) {
+            return res.json(401, { error: 'message' });
+        }
 
-router.post('/authenticate', function(req, res)
-{
-    User.findOne(
-        {
-            name: req.body.name
-        },
-        function(err, user)
-        {
-            if (err) throw err;
-            if (!user)
-            {
-                res.json({ success: false, message: 'Authentication failed. User not found.' });
-            }
-            else if (user)
-            {
-                if (user.password != req.body.password)
-                {
-                    res.json({ success: false, message: 'Authentication failed. Wrong password.' });
-                }
-                else
-                {
-                    var token = jwt.sign(user, app.get('superSecret'),
-                    {
-                        expiresInMinutes: 1440
-                    });
-                    res.json({
-                        success: true,
-                        message: 'Enjoy your token!',
-                        token: token
-                    });
-                }
-            }
+        var token = jwt.sign(user, app.get('superSecret'), {
+            expiresInMinutes: 1440 // expires in 24 hours
         });
+        res.json({ token : token });
+
+    })(req, res, next);
+});
+
+router.post('/signup', function(req, res, next)
+{
+    passport.authenticate('local-signup', function(err, user, info) {
+        if (err) { return next(err) }
+        if (!user) {
+            return res.json(401, { error: info.message });
+        }
+        var token = jwt.sign(user, app.get('superSecret'), {
+            expiresInMinutes: 1440 // expires in 24 hours
+        });
+        res.json({ token : token ,email:user.email});
+
+    })(req, res, next);
 });
 
 router.use(function(req, res, next)
 {
     var token = req.body.token || req.query.token || req.headers['x-access-token'];
-    if (token)
-    {
+    if (token) {
+
+        // verifies secret and checks exp
         jwt.verify(token, app.get('superSecret'), function(err, decoded) {
             if (err) {
                 return res.json({ success: false, message: 'Failed to authenticate token.' });
             } else {
+                // if everything is good, save to request for use in other routes
                 req.decoded = decoded;
                 next();
             }
         });
-    }
-    else
-    {
-        return res.status(403).send(
-        {
+
+    } else {
+
+        // if there is no token
+        // return an error
+        return res.status(403).send({
             success: false,
             message: 'No token provided.'
         });
+
     }
 });
+
+
 
 //token required before fetching products or other apis below
 router.route('/products')
@@ -174,7 +217,7 @@ router.route('/change_discount')
             }
             async.series([
                 async.asyncify(pushiPhone.sendPushes("Discount changed to " + product.discount)),
-				async.asyncify(pushAndroid.sendPushes("Discount changed to " + product.discount))
+                async.asyncify(pushAndroid.sendPushes("Discount changed to " + product.discount))
             ]);
             res.json({ message: 'Discount value changed!' ,newProduct : product});
         });
