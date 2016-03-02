@@ -11,75 +11,98 @@ var async = require('async')
 var jwt    = require('jsonwebtoken');
 var config = require('./models/config');
 var User   = require('./models/user');
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+app.use(morgan('tiny'))
+
 mongoose.connect('mongodb://localhost/eSubzi');
+
 app.set('superSecret', config.secret);
+
 router.get('/', function(req, res) {
     res.json({ message: 'hooray! welcome to our api!' });
 });
+
 router.route('/setup')
 .get(function(req, res) {
-  var user = new User({
-    name: 'Rajat Surana',
-    password: 'password',
-    admin: true
-  });
+    var user = new User({
+        name: 'Rajat Surana',
+        password: 'password',
+        admin: true
+    });
 
-  user.save(function(err) {
-    if (err) throw err;
-    console.log('User saved successfully');
-    res.json({ success: true ,user:user});
-  });
+    user.save(function(err) {
+        if (err) throw err;
+        console.log('User saved successfully');
+        res.json({ success: true ,user:user});
+    });
 });
 
-router.get('/users', function(req, res) {
-  User.find({}, function(err, users) {
-    res.json(users);
-  });
+router.get('/users', function(req, res)
+{
+    User.find({}, function(err, users) {
+        res.json(users);
+    });
 });
 
-router.post('/authenticate', function(req, res) {
-  User.findOne({
-    name: req.body.name
-  }, function(err, user) {
-    if (err) throw err;
-    if (!user) {
-      res.json({ success: false, message: 'Authentication failed. User not found.' });
-    } else if (user) {
-      if (user.password != req.body.password) {
-        res.json({ success: false, message: 'Authentication failed. Wrong password.' });
-      } else {
-        var token = jwt.sign(user, app.get('superSecret'), {
-          expiresInMinutes: 1440
+router.post('/authenticate', function(req, res)
+{
+    User.findOne(
+        {
+            name: req.body.name
+        },
+        function(err, user)
+        {
+            if (err) throw err;
+            if (!user)
+            {
+                res.json({ success: false, message: 'Authentication failed. User not found.' });
+            }
+            else if (user)
+            {
+                if (user.password != req.body.password)
+                {
+                    res.json({ success: false, message: 'Authentication failed. Wrong password.' });
+                }
+                else
+                {
+                    var token = jwt.sign(user, app.get('superSecret'),
+                    {
+                        expiresInMinutes: 1440
+                    });
+                    res.json({
+                        success: true,
+                        message: 'Enjoy your token!',
+                        token: token
+                    });
+                }
+            }
         });
-        res.json({
-          success: true,
-          message: 'Enjoy your token!',
-          token: token
+});
+
+router.use(function(req, res, next)
+{
+    var token = req.body.token || req.query.token || req.headers['x-access-token'];
+    if (token)
+    {
+        jwt.verify(token, app.get('superSecret'), function(err, decoded) {
+            if (err) {
+                return res.json({ success: false, message: 'Failed to authenticate token.' });
+            } else {
+                req.decoded = decoded;
+                next();
+            }
         });
-      }
     }
-  });
-});
-
-router.use(function(req, res, next) {
-  var token = req.body.token || req.query.token || req.headers['x-access-token'];
-  if (token) {
-    jwt.verify(token, app.get('superSecret'), function(err, decoded) {
-      if (err) {
-        return res.json({ success: false, message: 'Failed to authenticate token.' });
-      } else {
-        req.decoded = decoded;
-        next();
-      }
-    });
-  } else {
-    return res.status(403).send({
-        success: false,
-        message: 'No token provided.'
-    });
-  }
+    else
+    {
+        return res.status(403).send(
+        {
+            success: false,
+            message: 'No token provided.'
+        });
+    }
 });
 
 //token required before fetching products or other apis below
@@ -147,15 +170,7 @@ router.route('/change_discount')
             }
             async.series([
                 async.asyncify(pushiPhone.sendPushes("Discount changed to " + product.discount)),
-                function () {
-                    // data is the result of parsing the text.
-                    // If there was a parsing error, it would have been caught.
-                },
-				async.asyncify(pushAndroid.sendPushes("Discount changed to " + product.discount)),
-                function () {
-                    // data is the result of parsing the text.
-                    // If there was a parsing error, it would have been caught.
-                }
+                async.asyncify(pushAndroid.sendPushes("Discount changed to " + product.discount))
             ]);
             res.json({ message: 'Discount value changed!' ,newProduct : product});
         });
