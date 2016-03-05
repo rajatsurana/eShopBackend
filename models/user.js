@@ -1,10 +1,14 @@
 var mongoose = require('mongoose')
 var bcrypt   = require('bcrypt-nodejs');
 var Schema = mongoose.Schema;
-
+var enumObject = {
+  values: 'Customer Shopkeeper'.split(' '),
+  message: 'enum validator failed for path `{PATH}` with value `{VALUE}`'
+}
 var userSchema =new Schema({
     email: String,
     password: String,
+    userType: { type: String, enum: enumObject },
     admin: Boolean
 })
 
