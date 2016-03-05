@@ -100,7 +100,7 @@ router.post('/login', function(req, res, next)
         var token = jwt.sign(user, app.get('superSecret'), {
             expiresInMinutes: 1440 // expires in 24 hours
         });
-        res.json({ token : token ,userId:user._id});
+        res.json({ token : token, userId:user._id, email:user.email, type:user.userType});
 
     })(req, res, next);
 });
@@ -115,7 +115,7 @@ router.post('/signup', function(req, res, next)
         var token = jwt.sign(user, app.get('superSecret'), {
             expiresInMinutes: 1440 // expires in 24 hours
         });
-        res.json({ token : token ,email:user.email,userId:user._id});
+        res.json({ token : token, email:user.email, userId:user._id,type:user.userType});
 
     })(req, res, next);
 });
@@ -158,7 +158,7 @@ router.route('/products/find')
         {
             res.send(err)
         }
-        res.json(products);
+        res.json({products:products});
     });
 });
 router.route('/products/create')
@@ -229,52 +229,55 @@ router.route('/placeOrder')
 .post(function(req, res)
 {
     var productIDArray =req.body.productIds;
-
     var quantityArray = req.body.quantityVals;
-    console.log({productIDArray:productIDArray, ab:req.body.quantityVals});
-    var customerId =req.body.customerId;
-    Product.find({ '_id' : { $in : productIDArray }},function(err, products){
-        console.log({found:products});
-        if(!products){
-            res.json({ message: 'Invalid order' });
-        }else{
+    if(productIDArray.length==quantityArray.length){
+        console.log({productIDArray:productIDArray, ab:req.body.quantityVals});
+        var customerId =req.body.customerId;
+        Product.find({ '_id' : { $in : productIDArray }},function(err, products){
+            console.log({found:products});
+            if(!products){
+                res.json({ message: 'Invalid order' });
+            }else{
 
-            var order = new Order();
-            var shopId="";
-            var qProduct;
-            for (var j=0; j<products.length; j++){
-                order.items.push({productId:products[j]._id,quantity:quantityArray[j]});
-                //diff product diff shopkeeper can be created here
-                shopId=products[j].userId;
-                var originalQ =products[j].quantity;
-                var orderQ=quantityArray[j];
+                var order = new Order();
+                var shopId="";
+                var qProduct;
+                for (var j=0; j<products.length; j++){
+                    order.items.push({productId:products[j]._id,quantity:quantityArray[j]});
+                    //diff product diff shopkeeper can be created here
+                    shopId=products[j].userId;
+                    var originalQ =products[j].quantity;
+                    var orderQ=quantityArray[j];
 
-                products[j].quantity = originalQ-orderQ;
+                    products[j].quantity = originalQ-orderQ;
 
-                var finalPro=products[j];
-                finalPro.save(function(err)
+                    var finalPro=products[j];
+                    finalPro.save(function(err)
+                    {
+                        if (err)
+                        {
+                            console.log(err +"product save error");
+                        }
+
+                    });
+                }
+                order.shopKeeperId=shopId,
+                order.customerId=customerId,
+                order.currentState='OrderReceived'
+
+                order.save(function(err)
                 {
                     if (err)
                     {
-                        console.log(err +"product save error");
+                        res.send(err);
                     }
-
+                    res.json({ message: 'order Recieved' ,newOrder : order});
                 });
             }
-            order.shopKeeperId=shopId,
-            order.customerId=customerId,
-            order.currentState='OrderReceived'
-
-            order.save(function(err)
-            {
-                if (err)
-                {
-                    res.send(err);
-                }
-                res.json({ message: 'order Recieved' ,newOrder : order});
-            });
-        }
-    });
+        });
+    }else{
+        res.json({ message: 'Array length not match'});
+    }
 });
 router.route('/change_order_state')
 .post(function(req, res){
@@ -302,8 +305,6 @@ router.route('/find_orders')
             if(!orders){
                 res.json({ message: 'orders invalid for this user' });
             }else{
-                //order.currentState=req.body.order_state;
-
                 res.json({ Orders : orders});
             }
         });
@@ -312,7 +313,6 @@ router.route('/find_orders')
             if(!orders){
                 res.json({ message: 'orders invalid for this user' });
             }else{
-                //order.currentState=req.body.order_state;
                 res.json({ Orders : orders});
             }
 
