@@ -54,9 +54,9 @@ passport.use('local-signup',new LocalStrategy(
     {
         usernameField : 'email',
         passwordField : 'password',
-        passReqToCallback : false
+        passReqToCallback : true
     },
-    function(email,password,done)
+    function(req,email,password,done)
     {
         User.findOne({'email':email},function(err,user)
         {
@@ -71,7 +71,7 @@ passport.use('local-signup',new LocalStrategy(
                 var newUser = new User()
                 newUser.email = email
                 newUser.password = newUser.generateHash(password)
-                newUser.userType = 'Customer'
+                newUser.userType = req.body.userType
                 newUser.save(function(err)
                 {
                     if(err)
@@ -224,8 +224,10 @@ router.route('/change_discount')
         });
     });
 });
+
 router.route('/placeOrder')
-.post(function(req, res){
+.post(function(req, res)
+{
     var productIDArray =req.body.productIds;
 
     var quantityArray = req.body.quantityVals;
@@ -256,7 +258,7 @@ router.route('/placeOrder')
                     {
                         console.log(err +"product save error");
                     }
-                    
+
                 });
             }
             order.shopKeeperId=shopId,
@@ -271,8 +273,8 @@ router.route('/placeOrder')
                 }
                 res.json({ message: 'order Recieved' ,newOrder : order});
             });
-    }
-});
+        }
+    });
 });
 router.route('/change_order_state')
 .post(function(req, res){
@@ -300,9 +302,9 @@ router.route('/find_orders')
             if(!orders){
                 res.json({ message: 'orders invalid for this user' });
             }else{
-            //order.currentState=req.body.order_state;
+                //order.currentState=req.body.order_state;
 
-            res.json({ Orders : orders});
+                res.json({ Orders : orders});
             }
         });
     }else if (type==='Shopkeeper'){
@@ -310,8 +312,8 @@ router.route('/find_orders')
             if(!orders){
                 res.json({ message: 'orders invalid for this user' });
             }else{
-            //order.currentState=req.body.order_state;
-            res.json({ Orders : orders});
+                //order.currentState=req.body.order_state;
+                res.json({ Orders : orders});
             }
 
         });
