@@ -180,10 +180,11 @@ router.route('/products/create')
     });
 });
 
+
 router.route('/update_price')
 .post(function(req, res)
 {
-    if (req.body["price"] == 0)
+    if (req.body.price == 0)
     {
         res.send({message : "price can't be 0"})
     }
@@ -191,15 +192,20 @@ router.route('/update_price')
     {
         Product.findOne({ _id: req.body.id }, function(err, product)
         {
-            product.price = req.body.price;
-            product.save(function(err)
-            {
-                if (err)
+            if(!product){
+                console.log("not found");
+                res.json({ message: 'Not found'});
+            }else{
+                product.price = req.body.price;
+                product.save(function(err)
                 {
-                    res.send(err);
-                }
-                res.json({ message: 'Product price updated!' ,newProduct:product});
-            });
+                    if (err)
+                    {
+                        res.send(err);
+                    }
+                    res.json({ message: 'Product price updated!' ,newProduct:product});
+                });
+            }
         });
     }
 });
@@ -209,48 +215,54 @@ router.route('/change_discount')
 {
     Product.findOne({ _id: req.body.id }, function(err, product)
     {
-        product.discount=req.body.discount || '0';
-        product.save(function(err)
-        {
-            if (err)
+        if(!product){
+            console.log("not found");
+            res.json({ message: 'Not found'});
+        }else{
+            product.discount=req.body.discount || '0';
+            product.save(function(err)
             {
-                res.send(err);
-            }
-            async.series([
-                async.asyncify(pushiPhone.sendPushes("Discount changed to " + product.discount)),
-                async.asyncify(pushAndroid.sendPushes("Discount changed to " + product.discount))
-            ]);
-            res.json({ message: 'Discount value changed!' ,newProduct : product});
-        });
+
+                if (err)
+                {
+                    res.send(err);
+                }
+                async.series([
+                    async.asyncify(pushiPhone.sendPushes("Discount changed to " + product.discount)),
+                    async.asyncify(pushAndroid.sendPushes("Discount changed to " + product.discount))
+                ]);
+                res.json({ message: 'Discount value changed!', newProduct : product});
+            });
+        }
+
     });
 });
 
 router.route('/placeOrder')
 .post(function(req, res)
 {
-    var productIDArray =req.body.productIds;
-    var quantityArray = req.body.quantityVals;
+    var productIDArray =JSON.parse(req.body.productIds);
+    var quantityArray = JSON.parse(req.body.quantityVals);
+    console.log(productIDArray);
+    console.log(quantityArray);
     if(productIDArray.length==quantityArray.length){
-        console.log({productIDArray:productIDArray, ab:req.body.quantityVals});
         var customerId =req.body.customerId;
         Product.find({ '_id' : { $in : productIDArray }},function(err, products){
             console.log({found:products});
             if(!products){
                 res.json({ message: 'Invalid order' });
             }else{
-
                 var order = new Order();
                 var shopId="";
                 var qProduct;
                 for (var j=0; j<products.length; j++){
-                    order.items.push({productId:products[j]._id,quantity:quantityArray[j]});
+                    order.items.push({productId:productIDArray[j],quantity:quantityArray[j]});
+                    console.log(productIDArray[j]+" "+order.items);
                     //diff product diff shopkeeper can be created here
                     shopId=products[j].userId;
-                    var originalQ =products[j].quantity;
+                    var originalQ = products[j].quantity;
                     var orderQ=quantityArray[j];
-
                     products[j].quantity = originalQ-orderQ;
-
                     var finalPro=products[j];
                     finalPro.save(function(err)
                     {
@@ -258,19 +270,18 @@ router.route('/placeOrder')
                         {
                             console.log(err +"product save error");
                         }
-
                     });
                 }
                 order.shopKeeperId=shopId,
                 order.customerId=customerId,
                 order.currentState='OrderReceived'
-
                 order.save(function(err)
                 {
                     if (err)
                     {
                         res.send(err);
                     }
+                    console.log({newOrder : order});
                     res.json({ message: 'order Recieved' ,newOrder : order});
                 });
             }
@@ -315,10 +326,11 @@ router.route('/find_orders')
             }else{
                 res.json({ Orders : orders});
             }
-
         });
     }
 });
+
+
 app.use('/api', router);
 app.listen(3000);
 console.log('Magic happens on port 3000');
