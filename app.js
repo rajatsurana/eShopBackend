@@ -20,7 +20,7 @@ var secret = 'superSecret'
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-app.use(morgan('dev'))
+app.use(morgan('tiny'))
 app.use(passport.initialize());
 
 mongoose.connect('mongodb://localhost/eSubzi');
@@ -157,7 +157,7 @@ router.route('/products/find')
     });
 });
 
-router.route('/products/all')
+router.route('/products/get')
 .get(function(req, res)
 {
     Product.find(function(err, products)
@@ -222,7 +222,19 @@ router.route('/update_price')
     }
 });
 
-router.route('/send_discount')
+router.route('/discounts/get')
+.get(function(req,res)
+{
+    Discount.find(function(err, discounts)
+    {
+        if (err)
+        {
+            res.send(err)
+        }
+        res.json(discounts);
+    });
+})
+router.route('/discounts/create')
 .post(function(req,res)
 {
     var discount = new Discount()
@@ -235,8 +247,8 @@ router.route('/send_discount')
             res.send(err);
         }
         async.series([
-            async.asyncify(pushiPhone.sendPushes("Discount changed to " + product.discount)),
-            async.asyncify(pushAndroid.sendPushes("Discount changed to " + product.discount))
+            async.asyncify(pushiPhone.sendPushes(discount.discountDescription)),
+            async.asyncify(pushAndroid.sendPushes(discount.discountDescription))
         ]);
         res.json({ message: 'discount added!', discount: discount});
     });

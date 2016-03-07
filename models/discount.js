@@ -20,4 +20,4 @@ discountSchema.pre('save', function(next)
 });
 
 var Discount = mongoose.model('Discount', discountSchema);
-module.exports = Order;
+module.exports = Discount;
