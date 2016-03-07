@@ -124,7 +124,6 @@ router.use(function(req, res, next)
 {
     var token = req.body.token || req.query.token || req.headers['x-access-token'];
     if (token) {
-
         // verifies secret and checks exp
         jwt.verify(token, app.get('superSecret'), function(err, decoded) {
             if (err) {
@@ -137,7 +136,6 @@ router.use(function(req, res, next)
         });
 
     } else {
-
         // if there is no token
         // return an error
         return res.status(403).send({
@@ -147,7 +145,6 @@ router.use(function(req, res, next)
 
     }
 });
-
 //token required before fetching products or other apis below
 router.route('/products/find')
 .post(function(req, res)
@@ -161,6 +158,7 @@ router.route('/products/find')
         res.json({products:products});
     });
 });
+
 router.route('/products/create')
 .post(function(req,res)
 {
@@ -179,7 +177,6 @@ router.route('/products/create')
         res.json({ message: 'product created!', newProduct: product});
     });
 });
-
 
 router.route('/update_price')
 .post(function(req, res)
@@ -222,7 +219,6 @@ router.route('/change_discount')
             product.discount=req.body.discount || '0';
             product.save(function(err)
             {
-
                 if (err)
                 {
                     res.send(err);
@@ -234,7 +230,6 @@ router.route('/change_discount')
                 res.json({ message: 'Discount value changed!', newProduct : product});
             });
         }
-
     });
 });
 
@@ -290,6 +285,7 @@ router.route('/placeOrder')
         res.json({ message: 'Array length not match'});
     }
 });
+
 router.route('/change_order_state')
 .post(function(req, res){
     Order.findOne({'_id':req.body.orderId },function(err, order){
@@ -308,6 +304,7 @@ router.route('/change_order_state')
         }
     });
 });
+
 router.route('/find_orders')
 .post(function(req, res){
     var type =req.body.usertype;
@@ -316,7 +313,7 @@ router.route('/find_orders')
             if(!orders){
                 res.json({ message: 'orders invalid for this user' });
             }else{
-                res.json({ Orders : orders});
+                res.json({ message:'orders found',Orders : orders});
             }
         });
     }else if (type==='Shopkeeper'){
@@ -324,12 +321,11 @@ router.route('/find_orders')
             if(!orders){
                 res.json({ message: 'orders invalid for this user' });
             }else{
-                res.json({ Orders : orders});
+                res.json({ message:'orders found', Orders : orders});
             }
         });
     }
 });
-
 
 app.use('/api', router);
 app.listen(3000);

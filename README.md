@@ -13,5 +13,17 @@ Backend for CSP301
 - http://localhost:3000/api/update_price : to change price of product - POST -> _id(id) & price
 - http://localhost:3000/api/change_discount : to change discount of product - POST -> _id(id) & discount
 - http://localhost:3000/api/placeOrder : to place an order - POST -> productIds[], quantityVals[], customerId
-- http://localhost:3000/api/change_order_state : to change discount amount - POST -> orderId, order_state
-- http://localhost:3000/api/find_orders : to change discount amount - POST -> userId , usertype
+  pass this into params
+                            Map<String, String> params = new HashMap<>();
+                             JSONArray productIdsArr=new JSONArray();
+                                JSONArray quantitiesArr= new JSONArray();
+                                for(int x=0;x<productIds.length;x++){
+                                        productIdsArr.put(productIds[x]);
+                                        quantitiesArr.put(quantities[x]);
+                                }
+                                params.put("customerId",customerId);
+                                params.put("productIds",productIdsArr.toString());
+                                params.put("quantityVals",quantitiesArr.toString());
+- http://localhost:3000/api/change_order_state : to change order state - POST -> orderId, order_state
+  order_state: (OrderReceived OrderBeingProcessed Delivering Delivered)
+- http://localhost:3000/api/find_orders : returns all orders of a particular shopkeeper or customer - POST -> userId , usertype
