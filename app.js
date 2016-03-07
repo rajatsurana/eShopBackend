@@ -12,6 +12,7 @@ var passport = require('passport')
 var config = require('./models/config');
 var User   = require('./models/user');
 var Order   = require('./models/order');
+var Discount = require('./models/discount')
 var LocalStrategy   = require('passport-local').Strategy;
 var jwt = require('jsonwebtoken');
 
@@ -94,7 +95,7 @@ router.post('/login', function(req, res, next)
     passport.authenticate('local-login', function(err, user, info) {
         if (err) { return next(err) }
         if (!user) {
-            return res.json(401, { error: 'message' });
+            return res.json(401, { error: 'No user found. Pl0x Sign up' });
         }
 
         var token = jwt.sign(user, app.get('superSecret'), {
@@ -109,9 +110,6 @@ router.post('/signup', function(req, res, next)
 {
     passport.authenticate('local-signup', function(err, user, info) {
         if (err) { return next(err) }
-        if (!user) {
-            return res.json(401, { error: info.message });
-        }
         var token = jwt.sign(user, app.get('superSecret'), {
             expiresInMinutes: 1440 // expires in 24 hours
         });
@@ -159,6 +157,20 @@ router.route('/products/find')
     });
 });
 
+router.route('/products/all')
+.get(function(req, res)
+{
+    Product.find(function(err, products)
+    {
+        if (err)
+        {
+            res.send(err)
+        }
+        res.json(products);
+    });
+})
+
+
 router.route('/products/create')
 .post(function(req,res)
 {
@@ -167,7 +179,7 @@ router.route('/products/create')
     product.quantity = req.body.quantity || '0',
     product.description = req.body.description || 'default',
     product.discount = req.body.discount || '0',
-    product.userId=req.body.userId || 'default'
+    product.userId=req.body.userId || '0'
     product.save(function(err)
     {
         if (err)
@@ -189,10 +201,13 @@ router.route('/update_price')
     {
         Product.findOne({ _id: req.body.id }, function(err, product)
         {
-            if(!product){
+            if(!product)
+            {
                 console.log("not found");
                 res.json({ message: 'Not found'});
-            }else{
+            }
+            else
+            {
                 product.price = req.body.price;
                 product.save(function(err)
                 {
@@ -206,6 +221,26 @@ router.route('/update_price')
         });
     }
 });
+
+router.route('/send_discount')
+.post(function(req,res)
+{
+    var discount = new Discount()
+    discount.shopKeeperId = req.body.shopKeeperId
+    discount.discountDescription = req.body.discountDescription
+    discount.save(function(err)
+    {
+        if (err)
+        {
+            res.send(err);
+        }
+        async.series([
+            async.asyncify(pushiPhone.sendPushes("Discount changed to " + product.discount)),
+            async.asyncify(pushAndroid.sendPushes("Discount changed to " + product.discount))
+        ]);
+        res.json({ message: 'discount added!', discount: discount});
+    });
+})
 
 router.route('/change_discount')
 .post(function(req, res)
