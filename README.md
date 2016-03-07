@@ -11,9 +11,11 @@ Backend for CSP301
 - http://localhost:3000/api/products/create : to add product - POST ->price ,quantity, description, userId & discount
 - http://localhost:3000/api/products/find : to list products of a shopkeeper- POST -> userId
 - http://localhost:3000/api/update_price : to change price of product - POST -> _id(id) & price
-- http://localhost:3000/api/change_discount : to change discount of product - POST -> _id(id) & discount
+- http://localhost:3000/api/discounts/get : to fetch all discounts available - GET
+- http://localhost:3000/api/discounts/create :  create discount by shopkeeper, push notify - POST ->shopKeeperId, discountDescription
+- http://localhost:3000/api/change_discount : to change discount of product, push notify - POST -> _id(id) & discount
 - http://localhost:3000/api/placeOrder : to place an order - POST -> productIds[], quantityVals[], customerId
-  pass this into params
+- pass this into params
                             Map<String, String> params = new HashMap<>();
                              JSONArray productIdsArr=new JSONArray();
                                 JSONArray quantitiesArr= new JSONArray();

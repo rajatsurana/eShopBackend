@@ -12,7 +12,8 @@ var passport = require('passport')
 var config = require('./models/config');
 var User   = require('./models/user');
 var Order   = require('./models/order');
-var Discount = require('./models/discount')
+var Discount = require('./models/discount');
+var Device = require('./models/device');
 var LocalStrategy   = require('passport-local').Strategy;
 var jwt = require('jsonwebtoken');
 
@@ -144,6 +145,22 @@ router.use(function(req, res, next)
     }
 });
 //token required before fetching products or other apis below
+router.route('/register')
+.post(function(req, res){
+    var device = new Device();
+    device.deviceType=req.body.type;
+    device.email=req.body.email;
+    device.token=req.body.regId;
+    device.save(function(err)
+    {
+        if (err)
+        {
+            res.send(err);
+        }
+        res.json({ message: 'device registered!', newDevice: device});
+    });
+});
+
 router.route('/products/find')
 .post(function(req, res)
 {
@@ -240,15 +257,27 @@ router.route('/discounts/create')
     var discount = new Discount()
     discount.shopKeeperId = req.body.shopKeeperId
     discount.discountDescription = req.body.discountDescription
+    var regArr =[];
+    Device.find({},function(err,devices){
+    console.log(devices.length);
+        for(var y=0;y<devices.length;y++){
+            if(devices[y].deviceType=="Android"){
+                regArr.push(devices[y].token);
+                console.log(devices[y].token);
+                console.log(regArr.length+" : length");
+            }
+        }
+    });
     discount.save(function(err)
     {
         if (err)
         {
             res.send(err);
         }
+
         async.series([
             async.asyncify(pushiPhone.sendPushes(discount.discountDescription)),
-            async.asyncify(pushAndroid.sendPushes(discount.discountDescription))
+            async.asyncify(pushAndroid.sendPushes(discount.discountDescription,regArr))
         ]);
         res.json({ message: 'discount added!', discount: discount});
     });
@@ -264,15 +293,27 @@ router.route('/change_discount')
             res.json({ message: 'Not found'});
         }else{
             product.discount=req.body.discount || '0';
+            var regArr =[];
+        	Device.find({},function(err,devices){
+        	console.log(devices.length);
+        		for(var y=0;y<devices.length;y++){
+        			if(devices[y].deviceType=="Android"){
+        				regArr.push(devices[y].token);
+        				console.log(devices[y].token);
+                        console.log(regArr.length+" : length");
+        			}
+        		}
+        	});
             product.save(function(err)
             {
                 if (err)
                 {
                     res.send(err);
                 }
+
                 async.series([
                     async.asyncify(pushiPhone.sendPushes("Discount changed to " + product.discount)),
-                    async.asyncify(pushAndroid.sendPushes("Discount changed to " + product.discount))
+                    async.asyncify(pushAndroid.sendPushes("Discount changed to " + product.discount,regArr))
                 ]);
                 res.json({ message: 'Discount value changed!', newProduct : product});
             });
