@@ -16,7 +16,9 @@ var Discount = require('./models/discount');
 var Device = require('./models/device');
 var LocalStrategy   = require('passport-local').Strategy;
 var jwt = require('jsonwebtoken');
-
+var multiparty = require('multiparty');
+var fs = require('fs');
+var format = require('util').format;
 var secret = 'superSecret'
 
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -119,6 +121,7 @@ router.post('/signup', function(req, res, next)
     })(req, res, next);
 });
 
+
 router.use(function(req, res, next)
 {
     var token = req.body.token || req.query.token || req.headers['x-access-token'];
@@ -144,6 +147,8 @@ router.use(function(req, res, next)
 
     }
 });
+//var form = new multiparty.Form(options)
+
 //token required before fetching products or other apis below
 router.route('/register')
 .post(function(req, res){
@@ -151,13 +156,26 @@ router.route('/register')
     device.deviceType=req.body.type;
     device.email=req.body.email;
     device.token=req.body.regId;
-    device.save(function(err)
+    Device.find({token:req.body.regId},function(err, devices)
     {
         if (err)
         {
-            res.send(err);
+            res.send(err)
         }
-        res.json({ message: 'device registered!', newDevice: device});
+        if(devices.length==0){
+            device.save(function(err)
+            {
+                if (err)
+                {
+                    res.send(err);
+                }
+                console.log(device);
+                res.json({ message: 'New Device registered', Device: device});
+            });
+        }else{
+            res.json({message:'Already Registered' , Device: device});
+        }
+
     });
 });
 
@@ -239,6 +257,7 @@ router.route('/update_price')
     }
 });
 
+
 router.route('/discounts/get')
 .get(function(req,res)
 {
@@ -248,9 +267,10 @@ router.route('/discounts/get')
         {
             res.send(err)
         }
-        res.json(discounts);
+        res.json({Discounts:discounts});
     });
 })
+
 router.route('/discounts/create')
 .post(function(req,res)
 {
@@ -279,7 +299,7 @@ router.route('/discounts/create')
             async.asyncify(pushiPhone.sendPushes(discount.discountDescription)),
             async.asyncify(pushAndroid.sendPushes(discount.discountDescription,regArr))
         ]);
-        res.json({ message: 'discount added!', discount: discount});
+        res.json({ message: 'discount added!', newDiscount: discount});
     });
 })
 
@@ -415,6 +435,75 @@ router.route('/find_orders')
     }
 });
 
+router.get('/get_pic', function(req, res){
+  res.send('<form method="post" enctype="multipart/form-data">'
+    + '<p>Title: <input type="text" name="title" /></p>'
+    + '<p>Image: <input type="file" name="image" /></p>'
+    + '<p><input type="submit" value="Upload" /></p>'
+    + '</form>');
+});
+
+router.post('/get_pic', function(req, res, next){
+  // create a form to begin parsing
+  var form = new multiparty.Form();
+  var image={};
+  var title;
+  // We can add listeners for several form
+  // events such as "progress"
+
+  form.on('error', next);
+
+  form.on('close', function(){
+
+      res.send(format('\nuploaded %s (%d Kb) as %s'
+        , image.filename
+        , image.size / 1024 | 0
+        , title));
+  });
+  // listen on field event for title
+  form.on('field', function(name, val){
+    if (name !== 'title') return;
+    title = val;
+  });
+
+  // listen on part event for image file
+
+
+  form.on('part', function(part){
+    if (!part.filename) return;
+    if (part.name !== 'image') return part.resume();
+
+    image.filename = part.filename;
+    console.log(part.byteCount+" : part.byteCount")
+    image.size = 0;
+    part.on('data', function(buf){
+      image.size += buf.length;
+    });
+  });
+  form.on('file', function(name,file){
+    console.log(file.path +" ass");
+    console.log(__dirname +" ass");
+    console.log('filename: ' + name);
+    console.log('fileSize: '+ (file.size / 1024));
+    var tmp_path = file.path
+    var target_path =__dirname + '/uploads/fullsize/' + title +'.JPG';
+    var thumbPath = __dirname + '/uploads/thumbs/';
+    fs.renameSync(tmp_path, target_path, function(err) {
+        if(err) console.error(err.stack);
+    });
+     //res.redirect('./uploads/fullsize/'+name+'.JPG');
+            console.log(target_path +" : target");
+
+    /*gm(tmp_path)
+        .resize(150, 150)
+        .noProfile()
+        .write(thumbPath + 'small.png', function(err) {
+            if(err) console.error(err.stack);
+        });*/
+});
+  // parse the form
+  form.parse(req);
+});
 app.use('/api', router);
 app.listen(3000);
 console.log('Magic happens on port 3000');
