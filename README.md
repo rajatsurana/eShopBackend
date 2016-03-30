@@ -29,3 +29,5 @@ Backend for CSP301
 - http://localhost:3000/api/change_order_state : to change order state - POST -> orderId, order_state
   order_state: (OrderReceived OrderBeingProcessed Delivering Delivered)
 - http://localhost:3000/api/find_orders : returns all orders of a particular shopkeeper or customer - POST -> userId , usertype
+- http://localhost:3000/api/downloadImage/<shopkeeperId>/<productId> : to download product image - GET ->
+- http://localhost:3000/api/uploadImage : to uplaod product image - POST -> shopkeeperId , productId, imageFile:(base64 encoded)
