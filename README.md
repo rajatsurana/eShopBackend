@@ -31,3 +31,4 @@ Backend for CSP301
 - http://localhost:3000/api/find_orders : returns all orders of a particular shopkeeper or customer - POST -> userId , usertype
 - http://localhost:3000/api/downloadImage/<shopkeeperId>/<productId> : to download product image - GET ->
 - http://localhost:3000/api/uploadImage : to uplaod product image - POST -> shopkeeperId , productId, imageFile:(base64 encoded)
+- http://localhost:3000/api/get_pic : to uplaod product image - POST -> form:-- title(shopkeeperId/productId), image

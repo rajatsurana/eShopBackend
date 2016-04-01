@@ -465,6 +465,67 @@ router.get('/downloadImage/:shopkeeperId/:productId', function (req, res){//:fil
 
 
 });
+router.get('/get_pic', function(req, res){
+  res.send('<form method="post" enctype="multipart/form-data">'
+    + '<p>Title: <input type="text" name="title" /></p>'
+    + '<p>Image: <input type="file" name="image" /></p>'
+    + '<p><input type="submit" value="Upload" /></p>'
+    + '</form>');
+});
+
+router.post('/get_pic', function(req, res, next){
+  // create a form to begin parsing
+  var form = new multiparty.Form();
+  var image={};
+  var title;//shopkeeperId/productId
+
+  // We can add listeners for several form
+  // events such as "progress"
+  form.on('error', next);
+  form.on('close', function(){
+      res.send(format('\nuploaded %s (%d Kb) as %s'
+        , image.filename
+        , image.size / 1024 | 0
+        , title));
+  });
+  // listen on field event for title
+  form.on('field', function(name, val){
+    if (name !== 'title') return;
+    title = val;
+  });
+  // listen on part event for image file
+  form.on('part', function(part){
+    if (!part.filename) return;
+    if (part.name !== 'image') return part.resume();
+
+    image.filename = part.filename;
+    console.log(part.byteCount+" : part.byteCount")
+    image.size = 0;
+    part.on('data', function(buf){
+      image.size += buf.length;
+    });
+  });
+  form.on('file', function(name,file){
+    console.log('filename: ' + name);
+    console.log('fileSize: '+ (file.size / 1024));
+    var tmp_path = file.path
+    var target_path =__dirname + '/uploads/images/products/' + title +'.png';
+    var thumbPath = __dirname + '/uploads/thumbs/';
+    fs.renameSync(tmp_path, target_path, function(err) {
+        if(err) console.error(err.stack);
+    });
+     //res.redirect('./uploads/fullsize/'+name+'.JPG');
+            console.log(target_path +" : target");
+    /*gm(tmp_path)
+        .resize(150, 150)
+        .noProfile()
+        .write(thumbPath + 'small.png', function(err) {
+            if(err) console.error(err.stack);
+        });*/
+});
+  // parse the form
+  form.parse(req);
+});
 
 app.use('/api', router);
 app.listen(3000);
