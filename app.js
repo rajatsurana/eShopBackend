@@ -12,10 +12,13 @@ var passport = require('passport')
 var config = require('./models/config');
 var User   = require('./models/user');
 var Order   = require('./models/order');
-var Discount = require('./models/discount')
+var Discount = require('./models/discount');
+var Device = require('./models/device');
 var LocalStrategy   = require('passport-local').Strategy;
 var jwt = require('jsonwebtoken');
-
+var multiparty = require('multiparty');
+var fs = require('fs');
+var format = require('util').format;
 var secret = 'superSecret'
 
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -95,11 +98,12 @@ router.post('/login', function(req, res, next)
     passport.authenticate('local-login', function(err, user, info) {
         if (err) { return next(err) }
         if (!user) {
-            return res.json(401, { error: 'No user found. Pl0x Sign up' });
+            console.log(info.message);
+            return res.status(401).json({ error: info.message });
         }
 
         var token = jwt.sign(user, app.get('superSecret'), {
-            expiresInMinutes: 1440 // expires in 24 hours
+            expiresInMinutes: 1440*10 // expires in 24 hours
         });
         res.json({ token : token, userId:user._id, email:user.email, type:user.userType});
 
@@ -117,6 +121,7 @@ router.post('/signup', function(req, res, next)
 
     })(req, res, next);
 });
+
 
 router.use(function(req, res, next)
 {
@@ -143,7 +148,38 @@ router.use(function(req, res, next)
 
     }
 });
+//var form = new multiparty.Form(options)
+
 //token required before fetching products or other apis below
+router.route('/register')
+.post(function(req, res){
+    var device = new Device();
+    device.deviceType=req.body.type;
+    device.email=req.body.email;
+    device.token=req.body.regId;
+    Device.find({token:req.body.regId},function(err, devices)
+    {
+        if (err)
+        {
+            res.send(err)
+        }
+        if(devices.length==0){
+            device.save(function(err)
+            {
+                if (err)
+                {
+                    res.send(err);
+                }
+                console.log(device);
+                res.json({ message: 'New Device registered', Device: device});
+            });
+        }else{
+            res.json({message:'Already Registered' , Device: device});
+        }
+
+    });
+});
+
 router.route('/products/find')
 .post(function(req, res)
 {
@@ -222,6 +258,7 @@ router.route('/update_price')
     }
 });
 
+
 router.route('/discounts/get')
 .get(function(req,res)
 {
@@ -231,30 +268,43 @@ router.route('/discounts/get')
         {
             res.send(err)
         }
-        res.json(discounts);
+        res.json({Discounts:discounts});
     });
 })
+
 router.route('/discounts/create')
 .post(function(req,res)
 {
     var discount = new Discount()
     discount.shopKeeperId = req.body.shopKeeperId
     discount.discountDescription = req.body.discountDescription
+    var regArr =[];
+    Device.find({},function(err,devices){
+    console.log(devices.length);
+        for(var y=0;y<devices.length;y++){
+            if(devices[y].deviceType=="Android"){
+                regArr.push(devices[y].token);
+                console.log(devices[y].token);
+                console.log(regArr.length+" : length");
+            }
+        }
+    });
     discount.save(function(err)
     {
         if (err)
         {
             res.send(err);
         }
+
         async.series([
             async.asyncify(pushiPhone.sendPushes(discount.discountDescription)),
-            async.asyncify(pushAndroid.sendPushes(discount.discountDescription))
+            async.asyncify(pushAndroid.sendPushes(discount.discountDescription,regArr))
         ]);
-        res.json({ message: 'discount added!', discount: discount});
+        res.json({ message: 'discount added!', newDiscount: discount});
     });
 })
 
-router.route('/change_discount')
+router.route('/changeDiscount')
 .post(function(req, res)
 {
     Product.findOne({ _id: req.body.id }, function(err, product)
@@ -264,15 +314,24 @@ router.route('/change_discount')
             res.json({ message: 'Not found'});
         }else{
             product.discount=req.body.discount || '0';
+            var regArr =[];
+        	Device.find({},function(err,devices){
+        		for(var y=0;y<devices.length;y++){
+        			if(devices[y].deviceType=="Android"){
+        				regArr.push(devices[y].token);
+        			}
+        		}
+        	});
             product.save(function(err)
             {
                 if (err)
                 {
                     res.send(err);
                 }
+
                 async.series([
                     async.asyncify(pushiPhone.sendPushes("Discount changed to " + product.discount)),
-                    async.asyncify(pushAndroid.sendPushes("Discount changed to " + product.discount))
+                    async.asyncify(pushAndroid.sendPushes("Discount changed to " + product.discount,regArr))
                 ]);
                 res.json({ message: 'Discount value changed!', newProduct : product});
             });
@@ -283,10 +342,8 @@ router.route('/change_discount')
 router.route('/placeOrder')
 .post(function(req, res)
 {
-    var productIDArray =JSON.parse(req.body.productIds);
+    var productIDArray = JSON.parse(req.body.productIds);
     var quantityArray = JSON.parse(req.body.quantityVals);
-    console.log(productIDArray);
-    console.log(quantityArray);
     if(productIDArray.length==quantityArray.length){
         var customerId =req.body.customerId;
         Product.find({ '_id' : { $in : productIDArray }},function(err, products){
@@ -333,7 +390,7 @@ router.route('/placeOrder')
     }
 });
 
-router.route('/change_order_state')
+router.route('/changeorder_state')
 .post(function(req, res){
     Order.findOne({'_id':req.body.orderId },function(err, order){
         if(!order){
@@ -372,6 +429,98 @@ router.route('/find_orders')
             }
         });
     }
+});
+
+router.post('/uploadImage', function(req, res) {
+    var shopkeeperId=req.body.shopkeeperId;
+    var productId=req.body.productId;
+    var separator="/";
+    var imageBuffer = new Buffer(req.body.imageFile, 'base64');
+    var dir =__dirname+"/uploads/images/products/"+shopkeeperId+"/";
+    if (!fs.existsSync(dir)){
+        fs.mkdirSync(dir);
+    }
+    fs.writeFile(dir+productId+".png", imageBuffer, function(err) {
+        if(err){
+        res.json({'response':"Error"});
+        }else {
+        res.json({'response':"Saved"});
+        }
+    });
+});
+
+router.get('/downloadImage/:shopkeeperId/:productId', function (req, res){//:file/:userId/:complaintId..get
+        var shopkeeperId=req.params.shopkeeperId;
+        var productId = req.params.productId;
+        var dirname = "/uploads/images/products/"+shopkeeperId+"/"+productId+".png";
+        if (fs.existsSync( __dirname+dirname)){
+            var img = fs.readFileSync( __dirname+dirname);
+            res.writeHead(200, {'Content-Type': 'image/png' });
+            res.end(img, 'binary');
+        }
+
+
+});
+router.get('/productPicturesUpload', function(req, res){
+  res.send('<form method="post" enctype="multipart/form-data">'
+    + '<p>Title: <input type="text" name="title" /></p>'
+    + '<p>Image: <input type="file" name="image" /></p>'
+    + '<p><input type="submit" value="Upload" /></p>'
+    + '</form>');
+});
+
+router.post('/productPicturesUpload', function(req, res, next){
+  // create a form to begin parsing
+  var form = new multiparty.Form();
+  var image={};
+  var title;//shopkeeperId/productId
+
+  // We can add listeners for several form
+  // events such as "progress"
+  form.on('error', next);
+  form.on('close', function(){
+      res.send(format('\nuploaded %s (%d Kb) as %s'
+        , image.filename
+        , image.size / 1024 | 0
+        , title));
+  });
+  // listen on field event for title
+  form.on('field', function(name, val){
+    if (name !== 'title') return;
+    title = val;
+  });
+  // listen on part event for image file
+  form.on('part', function(part){
+    if (!part.filename) return;
+    if (part.name !== 'image') return part.resume();
+
+    image.filename = part.filename;
+    console.log(part.byteCount+" : part.byteCount")
+    image.size = 0;
+    part.on('data', function(buf){
+      image.size += buf.length;
+    });
+  });
+  form.on('file', function(name,file){
+    console.log('filename: ' + name);
+    console.log('fileSize: '+ (file.size / 1024));
+    var tmp_path = file.path
+    var target_path =__dirname + '/uploads/images/products/' + title +'.png';
+    var thumbPath = __dirname + '/uploads/thumbs/';
+    fs.renameSync(tmp_path, target_path, function(err) {
+        if(err) console.error(err.stack);
+    });
+     //res.redirect('./uploads/fullsize/'+name+'.JPG');
+            console.log(target_path +" : target");
+    /*gm(tmp_path)
+        .resize(150, 150)
+        .noProfile()
+        .write(thumbPath + 'small.png', function(err) {
+            if(err) console.error(err.stack);
+        });*/
+});
+  // parse the form
+  form.parse(req);
 });
 
 app.use('/api', router);

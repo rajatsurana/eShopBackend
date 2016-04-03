@@ -1,27 +1,31 @@
 var request = require('request')
-function sendPushes(pushMessage)
+var Device = require('../models/device');
+function sendPushes(pushMessage,regArr)
 {
 
-
-	request({
-	  uri: "https://gcm-http.googleapis.com/gcm/send",
-	  method: "POST",
-	  headers: {
-	    'Authorization': 'key=AIzaSyA2cj6dAC3UTWlyANDkuxCb4_R7S4S5s6U',
-		'Content-type':'application/json'
-		},
-		json:
-		{
-			data:
-			{
-				message: pushMessage
+	console.log(regArr.length+" len");
+	console.log(regArr[0]);
+	for(var x=0;x<regArr.length;x++){
+		request({
+		  uri: "https://gcm-http.googleapis.com/gcm/send",
+		  method: "POST",
+		  headers: {
+		    'Authorization': 'key=AIzaSyAWNh0qvyYpOP7hJC3Nkh6PJ9zj0ydPQfs',
+			'Content-type':'application/json'
 			},
-			to:"ekxywP1V6Z8:APA91bG9TZ8NsS7xjRqx2cXg0yy1MzdNvu0ypsiP0_25j98hyTRQi2IiayMVag_WyUEhcl35MqBh1a7GqPQz5bTjHLYLOZ-RJ6KLWhH_GjAG90oNQSDYF1vJe1SsTCGf-B2doxPk5FcA"
-		}
-	}, function(error, response, body) {
-	  console.log(response);
-	});
+			json:
+			{
+				data:
+				{
+					message: pushMessage
+				},
+				to:regArr[x]
+			}
+		}, function(error, response, body) {
+		  console.log(response);
+		});
+	}
 }
-
-
+//"ekxywP1V6Z8:APA91bG9TZ8NsS7xjRqx2cXg0yy1MzdNvu0ypsiP0_25j98hyTRQi2IiayMVag_WyUEhcl35MqBh1a7GqPQz5bTjHLYLOZ-RJ6KLWhH_GjAG90oNQSDYF1vJe1SsTCGf-B2doxPk5FcA"
+//elhci1kOtGo:APA91bGIeLt1Fdqri-GGTb2aGz_I-Neq4ZWDRj4__O_BlR8D34Yuyz2HU8WKPxO2BzqZya19uPnWWmd1JRjHtDf4E80F5NnxWsb5q14yLp1UieimkTv3orI8FK0C3KPF-iARoROIZXmN
 module.exports.sendPushes = sendPushes

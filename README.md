@@ -11,9 +11,11 @@ Backend for CSP301
 - http://localhost:3000/api/products/create : to add product - POST ->price ,quantity, description, userId & discount
 - http://localhost:3000/api/products/find : to list products of a shopkeeper- POST -> userId
 - http://localhost:3000/api/update_price : to change price of product - POST -> _id(id) & price
-- http://localhost:3000/api/change_discount : to change discount of product - POST -> _id(id) & discount
+- http://localhost:3000/api/discounts/get : to fetch all discounts available - GET
+- http://localhost:3000/api/discounts/create :  create discount by shopkeeper, push notify - POST ->shopKeeperId, discountDescription
+- http://localhost:3000/api/change_discount : to change discount of product, push notify - POST -> _id(id) & discount
 - http://localhost:3000/api/placeOrder : to place an order - POST -> productIds[], quantityVals[], customerId
-  pass this into params
+- pass this into params
                             Map<String, String> params = new HashMap<>();
                              JSONArray productIdsArr=new JSONArray();
                                 JSONArray quantitiesArr= new JSONArray();
@@ -27,3 +29,6 @@ Backend for CSP301
 - http://localhost:3000/api/change_order_state : to change order state - POST -> orderId, order_state
   order_state: (OrderReceived OrderBeingProcessed Delivering Delivered)
 - http://localhost:3000/api/find_orders : returns all orders of a particular shopkeeper or customer - POST -> userId , usertype
+- http://localhost:3000/api/downloadImage/<shopkeeperId>/<productId> : to download product image - GET ->
+- http://localhost:3000/api/uploadImage : to uplaod product image - POST -> shopkeeperId , productId, imageFile:(base64 encoded)
+- http://localhost:3000/api/get_pic : to uplaod product image - POST -> form:-- title(shopkeeperId/productId), image
