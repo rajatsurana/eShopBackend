@@ -98,11 +98,12 @@ router.post('/login', function(req, res, next)
     passport.authenticate('local-login', function(err, user, info) {
         if (err) { return next(err) }
         if (!user) {
-            return res.json(401, { error: 'No user found. Pl0x Sign up' });
+            console.log(info.message);
+            return res.status(401).json({ error: info.message });
         }
 
         var token = jwt.sign(user, app.get('superSecret'), {
-            expiresInMinutes: 1440 // expires in 24 hours
+            expiresInMinutes: 1440*10 // expires in 24 hours
         });
         res.json({ token : token, userId:user._id, email:user.email, type:user.userType});
 
@@ -303,7 +304,7 @@ router.route('/discounts/create')
     });
 })
 
-router.route('/change_discount')
+router.route('/changeDiscount')
 .post(function(req, res)
 {
     Product.findOne({ _id: req.body.id }, function(err, product)
@@ -315,12 +316,9 @@ router.route('/change_discount')
             product.discount=req.body.discount || '0';
             var regArr =[];
         	Device.find({},function(err,devices){
-        	console.log(devices.length);
         		for(var y=0;y<devices.length;y++){
         			if(devices[y].deviceType=="Android"){
         				regArr.push(devices[y].token);
-        				console.log(devices[y].token);
-                        console.log(regArr.length+" : length");
         			}
         		}
         	});
@@ -344,10 +342,8 @@ router.route('/change_discount')
 router.route('/placeOrder')
 .post(function(req, res)
 {
-    var productIDArray =JSON.parse(req.body.productIds);
+    var productIDArray = JSON.parse(req.body.productIds);
     var quantityArray = JSON.parse(req.body.quantityVals);
-    console.log(productIDArray);
-    console.log(quantityArray);
     if(productIDArray.length==quantityArray.length){
         var customerId =req.body.customerId;
         Product.find({ '_id' : { $in : productIDArray }},function(err, products){
@@ -394,7 +390,7 @@ router.route('/placeOrder')
     }
 });
 
-router.route('/change_order_state')
+router.route('/changeorder_state')
 .post(function(req, res){
     Order.findOne({'_id':req.body.orderId },function(err, order){
         if(!order){
@@ -465,7 +461,7 @@ router.get('/downloadImage/:shopkeeperId/:productId', function (req, res){//:fil
 
 
 });
-router.get('/get_pic', function(req, res){
+router.get('/productPicturesUpload', function(req, res){
   res.send('<form method="post" enctype="multipart/form-data">'
     + '<p>Title: <input type="text" name="title" /></p>'
     + '<p>Image: <input type="file" name="image" /></p>'
@@ -473,7 +469,7 @@ router.get('/get_pic', function(req, res){
     + '</form>');
 });
 
-router.post('/get_pic', function(req, res, next){
+router.post('/productPicturesUpload', function(req, res, next){
   // create a form to begin parsing
   var form = new multiparty.Form();
   var image={};
