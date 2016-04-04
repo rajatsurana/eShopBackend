@@ -342,8 +342,8 @@ router.route('/changeDiscount')
 router.route('/placeOrder')
 .post(function(req, res)
 {
-    var productIDArray = req.body.productIds;
-    var quantityArray = req.body.quantityVals;
+    var productIDArray = JSON.parse(req.body.productIds);
+    var quantityArray = JSON.parse(req.body.quantityVals);
     if(productIDArray.length==quantityArray.length){
         var customerId =req.body.customerId;
         Product.find({ '_id' : { $in : productIDArray }},function(err, products){
