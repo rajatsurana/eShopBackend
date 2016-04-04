@@ -430,7 +430,28 @@ router.route('/findOrders')
         });
     }
 });
-
+router.route('/findOrdersNotDelivered')
+.post(function(req, res){
+    var orderStatusArray =['OrderReceived','OrderBeingProcessed','Delivering'];
+    var type =req.body.usertype;
+    if(type==='Customer'){
+        Order.find({'customerId':req.body.userId ,currentState:{ $in : orderStatusArray }},function(err, orders){
+            if(!orders){
+                res.json({ message: 'orders invalid for this user' });
+            }else{
+                res.json({ message:'orders found',Orders : orders});
+            }
+        });
+    }else if (type==='Shopkeeper'){
+        Order.find({'shopKeeperId':req.body.userId,currentState:{ $in : orderStatusArray } },function(err, orders){
+            if(!orders){
+                res.json({ message: 'orders invalid for this user' });
+            }else{
+                res.json({ message:'orders found', Orders : orders});
+            }
+        });
+    }
+});
 router.post('/uploadImage', function(req, res) {
     var shopkeeperId=req.body.shopkeeperId;
     var productId=req.body.productId;
