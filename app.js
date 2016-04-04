@@ -409,7 +409,7 @@ router.route('/changeorder_state')
     });
 });
 
-router.route('/find_orders')
+router.route('/findOrders')
 .post(function(req, res){
     var type =req.body.usertype;
     if(type==='Customer'){
