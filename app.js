@@ -342,8 +342,8 @@ router.route('/changeDiscount')
 router.route('/placeOrder')
 .post(function(req, res)
 {
-    var productIDArray = JSON.parse(req.body.productIds);
-    var quantityArray = JSON.parse(req.body.quantityVals);
+    var productIDArray = req.body.productIds;
+    var quantityArray = req.body.quantityVals;
     if(productIDArray.length==quantityArray.length){
         var customerId =req.body.customerId;
         Product.find({ '_id' : { $in : productIDArray }},function(err, products){
@@ -409,7 +409,7 @@ router.route('/changeorder_state')
     });
 });
 
-router.route('/find_orders')
+router.route('/findOrders')
 .post(function(req, res){
     var type =req.body.usertype;
     if(type==='Customer'){
