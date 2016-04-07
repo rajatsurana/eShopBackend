@@ -202,7 +202,7 @@ router.route('/products/get')
         {
             res.send(err)
         }
-        res.json({products:products});
+        res.json(products);
     });
 })
 
