@@ -202,7 +202,7 @@ router.route('/products/get')
         {
             res.send(err)
         }
-        res.json(products);
+        res.json({products:products});
     });
 })
 
@@ -344,6 +344,8 @@ router.route('/placeOrder')
 {
     var productIDArray = JSON.parse(req.body.productIds);
     var quantityArray = JSON.parse(req.body.quantityVals);
+    console.log(productIDArray+" "+quantityArray);
+    console.log(productIDArray.length+" "+quantityArray.length);
     if(productIDArray.length==quantityArray.length){
         var customerId =req.body.customerId;
         Product.find({ '_id' : { $in : productIDArray }},function(err, products){
