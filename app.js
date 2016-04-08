@@ -2,7 +2,7 @@ var express    = require('express');
 var bodyParser = require('body-parser');
 var app        = express();
 var morgan     = require('morgan');
-var Product = require('./models/product');
+var Product = require('./models/product').Product;
 var mongoose   = require('mongoose');
 var router = express.Router();
 var pushiPhone = require('./apns/pushiPhone')
@@ -350,10 +350,11 @@ router.route('/changeDiscount')
 router.route('/placeOrder')
 .post(function(req, res)
 {
-    var productIDArray = JSON.parse(req.body.productIds);
-    var quantityArray = JSON.parse(req.body.quantityVals);
-    console.log(productIDArray+" "+quantityArray);
-    console.log(productIDArray.length+" "+quantityArray.length);
+    var items = req.body.items
+    for (var item in items)
+    {
+        
+    }
     if(productIDArray.length==quantityArray.length){
         var customerId =req.body.customerId;
         Product.find({ '_id' : { $in : productIDArray }},function(err, products){
