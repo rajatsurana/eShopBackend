@@ -130,32 +130,31 @@ router.post('/signup', function(req, res, next)
 });
 
 
-// router.use(function(req, res, next)
-// {
-//     var token = req.body.token || req.query.token || req.headers['x-access-token'];
-//     if (token) {
-//         // verifies secret and checks exp
-//         jwt.verify(token, app.get(secret), function(err, decoded) {
-//             if (err) {
-//                 return res.json({ success: false, message: 'Failed to authenticate token.' });
-//             } else {
-//                 // if everything is good, save to request for use in other routes
-//                 req.decoded = decoded;
-//                 next();
-//             }
-//         });
-//
-//     } else {
-//         // if there is no token
-//         // return an error
-//         return res.status(403).send({
-//             success: false,
-//             message: 'No token provided.'
-//         });
-//
-//     }
-// });
-//var form = new multiparty.Form(options)
+router.use(function(req, res, next)
+{
+    var token = req.body.token || req.query.token || req.headers['x-access-token'];
+    if (token) {
+        // verifies secret and checks exp
+        jwt.verify(token, app.get(secret), function(err, decoded) {
+            if (err) {
+                return res.json({ success: false, message: 'Failed to authenticate token.' });
+            } else {
+                // if everything is good, save to request for use in other routes
+                req.decoded = decoded;
+                next();
+            }
+        });
+
+    } else {
+        // if there is no token
+        // return an error
+        return res.status(403).send({
+            success: false,
+            message: 'No token provided.'
+        });
+
+    }
+});
 
 //token required before fetching products or other apis below
 router.route('/register')
@@ -350,55 +349,35 @@ router.route('/changeDiscount')
 router.route('/placeOrder')
 .post(function(req, res)
 {
-    var items = req.body.items
-    for (var item in items)
+    var items = Object.keys(req.body.items)
+    Product.find({ _id: { $in: items } }, function (err, result)
     {
-        
-    }
-    if(productIDArray.length==quantityArray.length){
-        var customerId =req.body.customerId;
-        Product.find({ '_id' : { $in : productIDArray }},function(err, products){
-            console.log({found:products});
-            if(!products){
-                res.json({ message: 'Invalid order' });
-            }else{
-                var order = new Order();
-                var shopId="";
-                var qProduct;
-                for (var j=0; j<products.length; j++){
-                    order.items.push({productId:productIDArray[j],quantity:quantityArray[j]});
-                    console.log(productIDArray[j]+" "+order.items);
-                    //diff product diff shopkeeper can be created here
-                    shopId=products[j].userId;
-                    var originalQ = products[j].quantity;
-                    var orderQ=quantityArray[j];
-                    products[j].quantity = originalQ-orderQ;
-                    var finalPro=products[j];
-                    finalPro.save(function(err)
-                    {
-                        if (err)
-                        {
-                            console.log(err +"product save error");
-                        }
-                    });
-                }
-                order.shopKeeperId=shopId,
-                order.customerId=customerId,
-                order.currentState='OrderReceived'
-                order.save(function(err)
-                {
-                    if (err)
-                    {
-                        res.send(err);
-                    }
-                    console.log({newOrder : order});
-                    res.json({ message: 'order Recieved' ,newOrder : order});
-                });
+        if (err)
+        {
+            res.send(err)
+        }
+        if (result.length == 0)
+        {
+            res.send("invalid orders")
+        }
+        var order = new Order()
+        order.customerId = req.body.customerId
+        order.shopKeeperId = req.body.shopKeeperId
+        order.currentState = 'OrderReceived'
+        order.items = result.map(function(orderProduct){
+            return {product:orderProduct , orderQuantity:req.body.items[orderProduct._id]}
+        })
+        console.log(order.items)
+        order.save(function(err)
+        {
+            if (err)
+            {
+                res.send(err);
             }
+            res.json({ message: 'order Recieved' ,newOrder : order});
         });
-    }else{
-        res.json({ message: 'Array length not match'});
-    }
+
+    });
 });
 
 router.route('/changeOrderState')
@@ -494,11 +473,6 @@ router.post('/profile', upload.single('image'), function (req, res, next)
         });
     });
 })
-
-// app.post('/photoUpload', function (req, res) {
-
-// });
-
 
 app.use('/api', router);
 app.listen(3000);

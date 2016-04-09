@@ -8,7 +8,7 @@ var enumObj =
 }
 var orderSchema = new Schema
 ({
-    items :[productSchema],
+    items :[{product:productSchema,orderQuantity:Number}],
     shopKeeperId:String ,
     customerId:String,
     currentState: { type: String, enum: enumObj },
