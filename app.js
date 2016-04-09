@@ -346,6 +346,9 @@ router.route('/changeDiscount')
     });
 });
 
+
+//TODO: @Surana:  I've added full products to the code. Carefully study the code I've changed. Use this knowledge to see if there are any changes in the "get latest order function". If yes, fix it.
+
 router.route('/placeOrder')
 .post(function(req, res)
 {
@@ -458,6 +461,8 @@ router.get('/productPicturesUpload', function(req, res){
     + '</form>');
 });
 
+
+//TODO : @Surana : I've added a route below that saves an image at the target_path. You have to store this in the db. Add the product id in the request.body and do this
 router.post('/profile', upload.single('image'), function (req, res, next)
 {
     tmp_path = req.file.path
