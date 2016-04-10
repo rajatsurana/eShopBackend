@@ -10,6 +10,7 @@ var orderSchema = new Schema
 ({
     items :[{product:productSchema,orderQuantity:Number}],
     shopKeeperId:String ,
+    customerEmail:String,
     customerId:String,
     currentState: { type: String, enum: enumObj },
     totalAmount: Number,

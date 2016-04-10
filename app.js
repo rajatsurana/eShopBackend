@@ -110,7 +110,7 @@ router.post('/login', function(req, res, next)
         }
 
         var token = jwt.sign(user, app.get(secret), {
-            expiresInMinutes: 1440*10 // expires in 24 hours
+            expiresIn: 24*60*60 // expires in 24 hours
         });
         res.json({ token : token, userId:user._id, email:user.email, type:user.userType});
 
@@ -122,7 +122,7 @@ router.post('/signup', function(req, res, next)
     passport.authenticate('localSignup', function(err, user, info) {
         if (err) { return next(err) }
         var token = jwt.sign(user, app.get(secret), {
-            expiresInMinutes: 1440 // expires in 24 hours
+            expiresIn: 24*60*60 // expires in 24 hours
         });
         res.json({ token : token, email:user.email, userId:user._id,type:user.userType});
 
@@ -222,7 +222,8 @@ router.route('/products/create')
     product.quantity = req.body.quantity || '0',
     product.description = req.body.description || 'default',
     product.discount = req.body.discount || '0',
-    product.userId=req.body.userId || '0'
+    product.userId=req.body.userId || '0',
+    product.userEmail=req.body.userEmail || '0'
     product.save(function(err)
     {
         if (err)
@@ -264,7 +265,6 @@ router.route('/update_price')
         });
     }
 });
-
 
 router.route('/discounts/get')
 .get(function(req,res)
@@ -352,36 +352,42 @@ router.route('/changeDiscount')
 router.route('/placeOrder')
 .post(function(req, res)
 {
-    var items = Object.keys(req.body.items)
+    var items = Object.keys(req.body.items);
     Product.find({ _id: { $in: items } }, function (err, result)
     {
         if (err)
         {
+            console.log(err);
             res.send(err)
         }
-        if (result.length == 0)
+
+        if (!result)
         {
             res.send("invalid orders")
         }
-        var order = new Order()
-        order.customerId = req.body.customerId
-        order.shopKeeperId = req.body.shopKeeperId
-        order.currentState = 'OrderReceived'
-        order.items = result.map(function(orderProduct){
-            return {product:orderProduct , orderQuantity:req.body.items[orderProduct._id]}
-        })
-        console.log(order.items)
-        order.save(function(err)
-        {
-            if (err)
+        else{
+            var order = new Order()
+            order.customerId = req.body.customerId,
+            order.shopKeeperId = req.body.shopKeeperId,
+            order.customerEmail=req.body.customerEmail || 'default',
+            order.currentState = 'OrderReceived'
+            order.items = result.map(function(orderProduct){
+                return {product:orderProduct , orderQuantity:req.body.items[orderProduct._id]};
+            })
+            console.log(order.items)
+            order.save(function(err)
             {
-                res.send(err);
-            }
-            res.json({ message: 'order Recieved' ,newOrder : order});
-        });
+                if (err)
+                {
+                    res.send(err);
+                }
+                res.json({ message: 'order Recieved' ,newOrder : order});
+            });
+        }
 
     });
 });
+
 
 router.route('/changeOrderState')
 .post(function(req, res){
@@ -463,6 +469,7 @@ router.get('/productPicturesUpload', function(req, res){
 
 
 //TODO : @Surana : I've added a route below that saves an image at the target_path. You have to store this in the db. Add the product id in the request.body and do this
+
 router.post('/profile', upload.single('image'), function (req, res, next)
 {
     tmp_path = req.file.path
