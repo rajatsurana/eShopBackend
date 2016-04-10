@@ -1,9 +1,9 @@
 var apn = require('apn');
-var options = { passphrase:"eSubzi"};
+var options = { passphrase:"esubzi"};
 options["cert"] = "./apns/cert.pem";
 options["key"] = "./apns/key.pem";
 var apnConnection = new apn.Connection(options);
-var myDevice = new apn.Device("a92cab8a4d62dd5f5371b49647810ac3766bb196ff2b2a0ca0a85be3b8f26e10");
+var myDevice = new apn.Device("e4e6076f2eb0bb9d4529afcb06fedfd86034ecc24044159581f327a331041729");
 
 function sendPushes(message)
 {

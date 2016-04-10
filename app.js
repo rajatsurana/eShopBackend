@@ -2,7 +2,7 @@ var express    = require('express');
 var bodyParser = require('body-parser');
 var app        = express();
 var morgan     = require('morgan');
-var Product = require('./models/product');
+var Product = require('./models/product').Product;
 var mongoose   = require('mongoose');
 var router = express.Router();
 var pushiPhone = require('./apns/pushiPhone')
@@ -16,11 +16,18 @@ var Discount = require('./models/discount');
 var Device = require('./models/device');
 var LocalStrategy   = require('passport-local').Strategy;
 var jwt = require('jsonwebtoken');
-var multiparty = require('multiparty');
-var fs = require('fs');
-var format = require('util').format;
+var multer = require('multer');
+var img = require('easyimage');
+var fs = require('fs')
 var secret = 'superSecret'
 
+var upload = multer({ dest: './uploads' })
+app.use(express.static(__dirname + '/uploads'));
+
+
+function getExtension(fn) {
+    return fn.split('.').pop();
+}
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(morgan('tiny'))
@@ -28,9 +35,9 @@ app.use(passport.initialize());
 
 mongoose.connect('mongodb://localhost/eSubzi');
 
-app.set('superSecret', config.secret);
+app.set(secret, config.secret);
 
-passport.use('local-login',new LocalStrategy(
+passport.use('localLogin',new LocalStrategy(
     {
         usernameField : 'email',
         passwordField : 'password',
@@ -54,7 +61,7 @@ passport.use('local-login',new LocalStrategy(
     }
 ));
 
-passport.use('local-signup',new LocalStrategy(
+passport.use('localSignup',new LocalStrategy(
     {
         usernameField : 'email',
         passwordField : 'password',
@@ -95,14 +102,14 @@ router.get('/', function(req, res)
 
 router.post('/login', function(req, res, next)
 {
-    passport.authenticate('local-login', function(err, user, info) {
+    passport.authenticate('localLogin', function(err, user, info) {
         if (err) { return next(err) }
         if (!user) {
             console.log(info.message);
             return res.status(401).json({ error: info.message });
         }
 
-        var token = jwt.sign(user, app.get('superSecret'), {
+        var token = jwt.sign(user, app.get(secret), {
             expiresInMinutes: 1440*10 // expires in 24 hours
         });
         res.json({ token : token, userId:user._id, email:user.email, type:user.userType});
@@ -112,9 +119,9 @@ router.post('/login', function(req, res, next)
 
 router.post('/signup', function(req, res, next)
 {
-    passport.authenticate('local-signup', function(err, user, info) {
+    passport.authenticate('localSignup', function(err, user, info) {
         if (err) { return next(err) }
-        var token = jwt.sign(user, app.get('superSecret'), {
+        var token = jwt.sign(user, app.get(secret), {
             expiresInMinutes: 1440 // expires in 24 hours
         });
         res.json({ token : token, email:user.email, userId:user._id,type:user.userType});
@@ -128,7 +135,7 @@ router.use(function(req, res, next)
     var token = req.body.token || req.query.token || req.headers['x-access-token'];
     if (token) {
         // verifies secret and checks exp
-        jwt.verify(token, app.get('superSecret'), function(err, decoded) {
+        jwt.verify(token, app.get(secret), function(err, decoded) {
             if (err) {
                 return res.json({ success: false, message: 'Failed to authenticate token.' });
             } else {
@@ -148,7 +155,6 @@ router.use(function(req, res, next)
 
     }
 });
-//var form = new multiparty.Form(options)
 
 //token required before fetching products or other apis below
 router.route('/register')
@@ -163,7 +169,8 @@ router.route('/register')
         {
             res.send(err)
         }
-        if(devices.length==0){
+        if(devices.length==0)
+        {
             device.save(function(err)
             {
                 if (err)
@@ -280,7 +287,7 @@ router.route('/discounts/create')
     discount.discountDescription = req.body.discountDescription
     var regArr =[];
     Device.find({},function(err,devices){
-    console.log(devices.length);
+        console.log(devices.length);
         for(var y=0;y<devices.length;y++){
             if(devices[y].deviceType=="Android"){
                 regArr.push(devices[y].token);
@@ -315,13 +322,13 @@ router.route('/changeDiscount')
         }else{
             product.discount=req.body.discount || '0';
             var regArr =[];
-        	Device.find({},function(err,devices){
-        		for(var y=0;y<devices.length;y++){
-        			if(devices[y].deviceType=="Android"){
-        				regArr.push(devices[y].token);
-        			}
-        		}
-        	});
+            Device.find({},function(err,devices){
+                for(var y=0;y<devices.length;y++){
+                    if(devices[y].deviceType=="Android"){
+                        regArr.push(devices[y].token);
+                    }
+                }
+            });
             product.save(function(err)
             {
                 if (err)
@@ -339,60 +346,44 @@ router.route('/changeDiscount')
     });
 });
 
+
+//TODO: @Surana:  I've added full products to the code. Carefully study the code I've changed. Use this knowledge to see if there are any changes in the "get latest order function". If yes, fix it.
+
 router.route('/placeOrder')
 .post(function(req, res)
 {
-    var productIDArray = JSON.parse(req.body.productIds);
-    var quantityArray = JSON.parse(req.body.quantityVals);
-    console.log(productIDArray+" "+quantityArray);
-    console.log(productIDArray.length+" "+quantityArray.length);
-    if(productIDArray.length==quantityArray.length){
-        var customerId =req.body.customerId;
-        Product.find({ '_id' : { $in : productIDArray }},function(err, products){
-            console.log({found:products});
-            if(!products){
-                res.json({ message: 'Invalid order' });
-            }else{
-                var order = new Order();
-                var shopId="";
-                var qProduct;
-                for (var j=0; j<products.length; j++){
-                    order.items.push({productId:productIDArray[j],quantity:quantityArray[j]});
-                    console.log(productIDArray[j]+" "+order.items);
-                    //diff product diff shopkeeper can be created here
-                    shopId=products[j].userId;
-                    var originalQ = products[j].quantity;
-                    var orderQ=quantityArray[j];
-                    products[j].quantity = originalQ-orderQ;
-                    var finalPro=products[j];
-                    finalPro.save(function(err)
-                    {
-                        if (err)
-                        {
-                            console.log(err +"product save error");
-                        }
-                    });
-                }
-                order.shopKeeperId=shopId,
-                order.customerId=customerId,
-                order.currentState='OrderReceived'
-                order.save(function(err)
-                {
-                    if (err)
-                    {
-                        res.send(err);
-                    }
-                    console.log({newOrder : order});
-                    res.json({ message: 'order Recieved' ,newOrder : order});
-                });
+    var items = Object.keys(req.body.items)
+    Product.find({ _id: { $in: items } }, function (err, result)
+    {
+        if (err)
+        {
+            res.send(err)
+        }
+        if (result.length == 0)
+        {
+            res.send("invalid orders")
+        }
+        var order = new Order()
+        order.customerId = req.body.customerId
+        order.shopKeeperId = req.body.shopKeeperId
+        order.currentState = 'OrderReceived'
+        order.items = result.map(function(orderProduct){
+            return {product:orderProduct , orderQuantity:req.body.items[orderProduct._id]}
+        })
+        console.log(order.items)
+        order.save(function(err)
+        {
+            if (err)
+            {
+                res.send(err);
             }
+            res.json({ message: 'order Recieved' ,newOrder : order});
         });
-    }else{
-        res.json({ message: 'Array length not match'});
-    }
+
+    });
 });
 
-router.route('/changeorder_state')
+router.route('/changeOrderState')
 .post(function(req, res){
     Order.findOne({'_id':req.body.orderId },function(err, order){
         if(!order){
@@ -440,8 +431,15 @@ router.route('/findOrdersNotDelivered')
         Order.find({'customerId':req.body.userId ,currentState:{ $in : orderStatusArray }},function(err, orders){
             if(!orders){
                 res.json({ message: 'orders invalid for this user' });
-            }else{
+            }
+            else
+            {
                 res.json({ message:'orders found',Orders : orders});
+                orders.sort(function(a, b) {
+                    return a.created_at > b.created_at
+                })
+                var firstOrder = orders[0]
+
             }
         });
     }else if (type==='Shopkeeper'){
@@ -454,97 +452,32 @@ router.route('/findOrdersNotDelivered')
         });
     }
 });
-router.post('/uploadImage', function(req, res) {
-    var shopkeeperId=req.body.shopkeeperId;
-    var productId=req.body.productId;
-    var separator="/";
-    var imageBuffer = new Buffer(req.body.imageFile, 'base64');
-    var dir =__dirname+"/uploads/images/products/"+shopkeeperId+"/";
-    if (!fs.existsSync(dir)){
-        fs.mkdirSync(dir);
-    }
-    fs.writeFile(dir+productId+".png", imageBuffer, function(err) {
-        if(err){
-        res.json({'response':"Error"});
-        }else {
-        res.json({'response':"Saved"});
-        }
-    });
-});
 
-router.get('/downloadImage/:shopkeeperId/:productId', function (req, res){//:file/:userId/:complaintId..get
-        var shopkeeperId=req.params.shopkeeperId;
-        var productId = req.params.productId;
-        var dirname = "/uploads/images/products/"+shopkeeperId+"/"+productId+".png";
-        if (fs.existsSync( __dirname+dirname)){
-            var img = fs.readFileSync( __dirname+dirname);
-            res.writeHead(200, {'Content-Type': 'image/png' });
-            res.end(img, 'binary');
-        }
-
-
-});
 router.get('/productPicturesUpload', function(req, res){
-  res.send('<form method="post" enctype="multipart/form-data">'
+    res.send('<form method="post" enctype="multipart/form-data" action="/api/profile">'
     + '<p>Title: <input type="text" name="title" /></p>'
     + '<p>Image: <input type="file" name="image" /></p>'
     + '<p><input type="submit" value="Upload" /></p>'
     + '</form>');
 });
 
-router.post('/productPicturesUpload', function(req, res, next){
-  // create a form to begin parsing
-  var form = new multiparty.Form();
-  var image={};
-  var title;//shopkeeperId/productId
 
-  // We can add listeners for several form
-  // events such as "progress"
-  form.on('error', next);
-  form.on('close', function(){
-      res.send(format('\nuploaded %s (%d Kb) as %s'
-        , image.filename
-        , image.size / 1024 | 0
-        , title));
-  });
-  // listen on field event for title
-  form.on('field', function(name, val){
-    if (name !== 'title') return;
-    title = val;
-  });
-  // listen on part event for image file
-  form.on('part', function(part){
-    if (!part.filename) return;
-    if (part.name !== 'image') return part.resume();
-
-    image.filename = part.filename;
-    console.log(part.byteCount+" : part.byteCount")
-    image.size = 0;
-    part.on('data', function(buf){
-      image.size += buf.length;
+//TODO : @Surana : I've added a route below that saves an image at the target_path. You have to store this in the db. Add the product id in the request.body and do this
+router.post('/profile', upload.single('image'), function (req, res, next)
+{
+    tmp_path = req.file.path
+    target_path =  req.file.path +'.' + getExtension(req.file.originalname)
+    fs.rename(tmp_path, target_path, function(err) {
+        if (err)
+        throw err;
+        // Delete the temporary file, so that the explicitly set temporary upload dir does not get filled with unwanted files.
+        fs.unlink(tmp_path, function() {
+            if (err)
+            throw err;
+            //
+        });
     });
-  });
-  form.on('file', function(name,file){
-    console.log('filename: ' + name);
-    console.log('fileSize: '+ (file.size / 1024));
-    var tmp_path = file.path
-    var target_path =__dirname + '/uploads/images/products/' + title +'.png';
-    var thumbPath = __dirname + '/uploads/thumbs/';
-    fs.renameSync(tmp_path, target_path, function(err) {
-        if(err) console.error(err.stack);
-    });
-     //res.redirect('./uploads/fullsize/'+name+'.JPG');
-            console.log(target_path +" : target");
-    /*gm(tmp_path)
-        .resize(150, 150)
-        .noProfile()
-        .write(thumbPath + 'small.png', function(err) {
-            if(err) console.error(err.stack);
-        });*/
-});
-  // parse the form
-  form.parse(req);
-});
+})
 
 app.use('/api', router);
 app.listen(3000);

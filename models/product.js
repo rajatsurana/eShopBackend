@@ -25,4 +25,5 @@ productSchema.pre('save', function(next)
 });
 
 var Product = mongoose.model('Product', productSchema);
-module.exports = Product;
+module.exports.Product = Product;
+module.exports.productSchema = productSchema
