@@ -19,6 +19,7 @@ var jwt = require('jsonwebtoken');
 var multer = require('multer');
 var img = require('easyimage');
 var fs = require('fs')
+var path = require('path')
 var secret = 'superSecret'
 
 var upload = multer({ dest: './uploads' })
@@ -129,31 +130,31 @@ router.post('/signup', function(req, res, next)
     })(req, res, next);
 });
 
-router.use(function(req, res, next)
-{
-    var token = req.body.token || req.query.token || req.headers['x-access-token'];
-    if (token) {
-        // verifies secret and checks exp
-        jwt.verify(token, app.get(secret), function(err, decoded) {
-            if (err) {
-                return res.json({ success: false, message: 'Failed to authenticate token.' });
-            } else {
-                // if everything is good, save to request for use in other routes
-                req.decoded = decoded;
-                next();
-            }
-        });
-
-    } else {
-        // if there is no token
-        // return an error
-        return res.status(403).send({
-            success: false,
-            message: 'No token provided.'
-        });
-
-    }
-});
+// router.use(function(req, res, next)
+// {
+//     var token = req.body.token || req.query.token || req.headers['x-access-token'];
+//     if (token) {
+//         // verifies secret and checks exp
+//         jwt.verify(token, app.get(secret), function(err, decoded) {
+//             if (err) {
+//                 return res.json({ success: false, message: 'Failed to authenticate token.' });
+//             } else {
+//                 // if everything is good, save to request for use in other routes
+//                 req.decoded = decoded;
+//                 next();
+//             }
+//         });
+//
+//     } else {
+//         // if there is no token
+//         // return an error
+//         return res.status(403).send({
+//             success: false,
+//             message: 'No token provided.'
+//         });
+//
+//     }
+// });
 
 //token required before fetching products or other apis below
 router.route('/register')
@@ -219,7 +220,7 @@ router.route('/products/create')
     var product = new Product();
     product.price =  req.body.price || '0',
     product.quantity = req.body.quantity || '0',
-    product.description = req.body.description || 'default',
+    product.description = req.body.description,
     product.discount = req.body.discount || '0',
     product.userId=req.body.userId || '0',
     product.userEmail=req.body.userEmail || '0'
@@ -346,9 +347,6 @@ router.route('/changeDiscount')
     });
 });
 
-
-//TODO: @Surana:  I've added full products to the code. Carefully study the code I've changed. Use this knowledge to see if there are any changes in the "get latest order function". If yes, fix it.
-
 router.route('/placeOrder')
 .post(function(req, res)
 {
@@ -369,7 +367,7 @@ router.route('/placeOrder')
             var order = new Order()
             order.customerId = req.body.customerId,
             order.shopKeeperId = req.body.shopKeeperId,
-            order.customerEmail=req.body.customerEmail || 'default',
+            order.customerEmail=req.body.customerEmail,
             order.currentState = 'OrderReceived'
             order.items = result.map(function(orderProduct){
                 return {product:orderProduct , orderQuantity:req.body.items[orderProduct._id]};
@@ -467,14 +465,12 @@ router.get('/productPicturesUpload', function(req, res){
     + '</form>');
 });
 
-//TODO : @Surana : I've added a route below that saves an image at the target_path. You have to store this in the db. Add the product id in the request.body and do this
-
 router.post('/profile', upload.single('image'), function (req, res, next)
 {
-    var productId=req.body.productId || 'default';
+    var productId=req.body.productId || req.body.title;
     tmp_path = req.file.path;
     originalName=req.file.originalname;
-    target_path =  'uploads/'+productId +'.' + getExtension(originalName);
+    target_path =  req.file.path +'.' + getExtension(originalName);
     fs.rename(tmp_path, target_path, function(err) {
         if (err)
         throw err;
@@ -483,25 +479,26 @@ router.post('/profile', upload.single('image'), function (req, res, next)
             if (err)
             throw err;
             //
+            Product.findOne({_id:productId},function(err, product)
+            {
+                if (!product)
+                {
+                    res.json({error:'not found'});
+                }else{
+                    product.photoUrl = 'http://128.199.152.41:3000/' + path.basename(target_path);
+                    product.save(function(err)
+                    {
+                        if (err)
+                        {
+                            res.send(err);
+                        }
+                        res.json({ message: 'product photoUrl Updated' ,photoUrl : product.photoUrl});
+                    });
+                }
+            });
         });
     });
-    Product.findOne({_id:productId},function(err, product)
-    {
-        if (!product)
-        {
-            res.json({error:'not found'});
-        }else{
-            product.photoUrl = 'http://localhost:3000/'+productId+'.'+getExtension(originalName);
-            product.save(function(err)
-            {
-                if (err)
-                {
-                    res.send(err);
-                }
-                res.json({ message: 'product photoUrl Updated' ,photoUrl : product.photoUrl});
-            });
-        }
-    });
+
 
 });
 
