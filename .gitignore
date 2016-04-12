@@ -34,3 +34,5 @@ node_modules
 
 #ids
 ids.txt
+
+uploads/*

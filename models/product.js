@@ -9,6 +9,7 @@ var productSchema = new Schema
 	quantity :Number,
 	photoUrl: String,
 	userId:String,
+	userEmail:String,
 	description: String,
 	discount: Number,
     created_at: Date,
