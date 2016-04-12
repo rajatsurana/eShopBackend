@@ -129,7 +129,6 @@ router.post('/signup', function(req, res, next)
     })(req, res, next);
 });
 
-
 router.use(function(req, res, next)
 {
     var token = req.body.token || req.query.token || req.headers['x-access-token'];
@@ -265,6 +264,7 @@ router.route('/update_price')
         });
     }
 });
+
 
 router.route('/discounts/get')
 .get(function(req,res)
@@ -461,19 +461,20 @@ router.route('/findOrdersNotDelivered')
 
 router.get('/productPicturesUpload', function(req, res){
     res.send('<form method="post" enctype="multipart/form-data" action="/api/profile">'
-    + '<p>Title: <input type="text" name="title" /></p>'
+    + '<p>ProductId: <input type="text" name="productId" /></p>'
     + '<p>Image: <input type="file" name="image" /></p>'
     + '<p><input type="submit" value="Upload" /></p>'
     + '</form>');
 });
 
-
 //TODO : @Surana : I've added a route below that saves an image at the target_path. You have to store this in the db. Add the product id in the request.body and do this
 
 router.post('/profile', upload.single('image'), function (req, res, next)
 {
-    tmp_path = req.file.path
-    target_path =  req.file.path +'.' + getExtension(req.file.originalname)
+    var productId=req.body.productId || 'default';
+    tmp_path = req.file.path;
+    originalName=req.file.originalname;
+    target_path =  'uploads/'+productId +'.' + getExtension(originalName);
     fs.rename(tmp_path, target_path, function(err) {
         if (err)
         throw err;
@@ -484,7 +485,25 @@ router.post('/profile', upload.single('image'), function (req, res, next)
             //
         });
     });
-})
+    Product.findOne({_id:productId},function(err, product)
+    {
+        if (!product)
+        {
+            res.json({error:'not found'});
+        }else{
+            product.photoUrl = 'http://localhost:3000/'+productId+'.'+getExtension(originalName);
+            product.save(function(err)
+            {
+                if (err)
+                {
+                    res.send(err);
+                }
+                res.json({ message: 'product photoUrl Updated' ,photoUrl : product.photoUrl});
+            });
+        }
+    });
+
+});
 
 app.use('/api', router);
 app.listen(3000);
