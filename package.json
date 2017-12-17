@@ -1,5 +1,5 @@
 {
-  "name": "eSubziBackend",
+  "name": "eShopBackend",
   "version": "1.0.0",
   "description": "This repo features an express app",
   "main": "app.js",
@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/codeOfRobin/eSubziBackend.git"
+    "url": "git+https://github.com/rajatsurana/eShopBackend.git"
   },
   "dependencies": {
     "apn": "^1.7.5",
@@ -24,6 +24,7 @@
     "mongoose": "^4.4.4",
     "morgan": "^1.7.0",
     "multer": "^1.1.0",
+    "nodemon": "^1.13.3",
     "passport": "^0.3.2",
     "passport-local": "^1.0.0",
     "request": "^2.69.0"

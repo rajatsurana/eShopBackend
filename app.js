@@ -34,7 +34,7 @@ app.use(bodyParser.json());
 app.use(morgan('tiny'))
 app.use(passport.initialize());
 
-mongoose.connect('mongodb://localhost/eSubzi');
+mongoose.connect('mongodb://localhost/eShop');
 
 app.set(secret, config.secret);
 
@@ -486,7 +486,7 @@ router.post('/profile', upload.single('image'), function (req, res, next)
                 {
                     res.json({error:'not found'});
                 }else{
-                    product.photoUrl = 'http://128.199.152.41:3000/' + path.basename(target_path);
+                    product.photoUrl = 'http://139.59.30.244:3000/' + path.basename(target_path);
                     product.save(function(err)
                     {
                         if (err)
