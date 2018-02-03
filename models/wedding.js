@@ -20,4 +20,5 @@ weddingSchema.pre('save', function(next)
 });
 
 var Wedding = mongoose.model('Wedding', weddingSchema);
-module.exports = Wedding;
+module.exports.Wedding = Wedding;
+module.exports.weddingSchema = weddingSchema
