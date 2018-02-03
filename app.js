@@ -3,6 +3,7 @@ var bodyParser = require('body-parser');
 var app        = express();
 var morgan     = require('morgan');
 var Product = require('./models/product').Product;
+var Wedding = require('./models/wedding').Wedding;
 var mongoose   = require('mongoose');
 var router = express.Router();
 var pushiPhone = require('./apns/pushiPhone')
@@ -21,7 +22,7 @@ var img = require('easyimage');
 var fs = require('fs')
 var path = require('path')
 var secret = 'superSecret'
-
+var ipPort = 'http://139.59.30.244:3000/'
 var upload = multer({ dest: './uploads' })
 app.use(express.static(__dirname + '/uploads'));
 
@@ -34,7 +35,7 @@ app.use(bodyParser.json());
 app.use(morgan('tiny'))
 app.use(passport.initialize());
 
-mongoose.connect('mongodb://localhost/eShop');
+mongoose.connect('mongodb://localhost/eShop', { useMongoClient: true });
 
 app.set(secret, config.secret);
 
@@ -100,6 +101,35 @@ router.get('/', function(req, res)
 {
     res.json({ message: 'hooray! welcome to our api!' });
 });
+router.get('/rsvp', function(req, res)
+{
+    Wedding.find(function(err, attendees)
+    {
+        if (err)
+        {
+            res.send(err)
+        }
+        res.json(attendees);
+    });
+
+});
+
+router.post('/rsvp', function(req, res)
+{
+    var rsvp = new Wedding();
+    rsvp.name =  req.body.name || ' ',
+    rsvp.email = req.body.email || ' ',
+    rsvp.guest = req.body.guest || ' ',
+    rsvp.attending = req.body.attending
+    rsvp.save(function(err)
+    {
+        if (err)
+        {
+            res.send(err);
+        }
+        res.json({ message: 'RSVP created!', newRsvp: rsvp});
+    });
+});
 
 router.post('/login', function(req, res, next)
 {
@@ -126,7 +156,6 @@ router.post('/signup', function(req, res, next)
             expiresIn: 24*60*60 // expires in 24 hours
         });
         res.json({ token : token, email:user.email, userId:user._id,type:user.userType});
-
     })(req, res, next);
 });
 
@@ -234,7 +263,31 @@ router.route('/products/create')
         res.json({ message: 'product created!', newProduct: product});
     });
 });
-
+router.route('/products/delete')
+.post(function(req,res)
+{
+    Product.findOne({ _id: req.body.id }, function(err, product)
+    {
+        if(!product){
+            console.log("not found");
+            res.json({ message: 'Not found'});
+        }else{
+            product.remove();
+            if (err)
+            {
+                res.send(err);
+            }
+            fs.unlink(__dirname + '/uploads/'+req.body.id+".png", function(error) {
+                if (error) {
+                    console.log('Error in deleteing '+req.body.id+'.png');
+                    //throw error;
+                }
+                console.log('Deleted '+req.body.id+'.png');
+            });
+            res.json({ message: 'product removed'});
+        }
+    });
+});
 router.route('/update_price')
 .post(function(req, res)
 {
@@ -469,9 +522,11 @@ router.get('/productPicturesUpload', function(req, res){
 router.post('/profile', upload.single('image'), function (req, res, next)
 {
     var productId=req.body.productId || req.body.title;
+    //console.log("req.productId: "+req.body.productId);
     tmp_path = req.file.path;
+    //console.log("req.file.path: "+req.file.path);
     originalName=req.file.originalname;
-    target_path =  req.file.path +'.' + getExtension(originalName);
+    target_path =  'uploads/'+req.body.productId +'.' + getExtension(originalName);
     fs.rename(tmp_path, target_path, function(err) {
         if (err)
         throw err;
@@ -486,7 +541,9 @@ router.post('/profile', upload.single('image'), function (req, res, next)
                 {
                     res.json({error:'not found'});
                 }else{
-                    product.photoUrl = 'http://139.59.30.244:3000/' + path.basename(target_path);
+                    product.photoUrl = ipPort + path.basename(target_path);//139.59.30.244
+                    //console.log(path.basename(target_path));
+                    //console.log(product.photoUrl);
                     product.save(function(err)
                     {
                         if (err)

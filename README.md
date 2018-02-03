@@ -1,5 +1,5 @@
-# eSubziBackend
-Backend for CSP301
+# eShopBackend
+Backend for E-SHOP
 
 - mongod
 - npm start || npm test depending on use case
