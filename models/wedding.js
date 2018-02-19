@@ -7,7 +7,12 @@ var weddingSchema = new Schema
     name: String,
     email: String,
     guest: String,
-    attending: String
+    attending: String,
+    arrivedate: String,
+    arrivetime: String,
+    departdate: String,
+    departtime: String,
+    transport: String
 });
 
 weddingSchema.pre('save', function(next)

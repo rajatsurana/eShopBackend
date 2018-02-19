@@ -120,7 +120,12 @@ router.post('/rsvp', function(req, res)
     rsvp.name =  req.body.name || ' ',
     rsvp.email = req.body.email || ' ',
     rsvp.guest = req.body.guest || ' ',
-    rsvp.attending = req.body.attending
+    rsvp.attending = req.body.attending || ' ',
+    rsvp.arrivedate = req.body.arrivedate || ' ',
+    rsvp.arrivetime = req.body.arrivetime || ' ',
+    rsvp.departdate = req.body.departdate || ' ',
+    rsvp.departtime = req.body.departtime || ' ',
+    rsvp.transport = req.body.transport || ' '
     rsvp.save(function(err)
     {
         if (err)
