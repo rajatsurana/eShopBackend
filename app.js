@@ -522,9 +522,9 @@ router.get('/productPicturesUpload', function(req, res){
 router.post('/profile', upload.single('image'), function (req, res, next)
 {
     var productId=req.body.productId || req.body.title;
-    //console.log("req.productId: "+req.body.productId);
+    console.log("req.productId: "+req.body.productId);
     tmp_path = req.file.path;
-    //console.log("req.file.path: "+req.file.path);
+    console.log("req.file.path: "+req.file.path);
     originalName=req.file.originalname;
     target_path =  'uploads/'+req.body.productId +'.' + getExtension(originalName);
     fs.rename(tmp_path, target_path, function(err) {
@@ -542,8 +542,8 @@ router.post('/profile', upload.single('image'), function (req, res, next)
                     res.json({error:'not found'});
                 }else{
                     product.photoUrl = ipPort + path.basename(target_path);//139.59.30.244
-                    //console.log(path.basename(target_path));
-                    //console.log(product.photoUrl);
+                    console.log(path.basename(target_path));
+                    console.log(product.photoUrl);
                     product.save(function(err)
                     {
                         if (err)
